@@ -1,0 +1,13 @@
+{
+  "name": "synthetic-data",
+  "private": true,
+  "workspaces": [
+    "packages/backend",
+    "packages/frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --workspace packages/backend run dev",
+    "dev:frontend": "npm --workspace packages/frontend run dev",
+    "build": "npm --workspace packages/backend run build && npm --workspace packages/frontend run build"
+  }
+}

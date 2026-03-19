@@ -1,0 +1,374 @@
+import { useState } from 'react';
+import { Plus, Trash2, ChevronRight, Settings2, ArrowRight } from 'lucide-react';
+import { useAppStore } from '../../store/appStore.js';
+import { useProjectStore } from '../../store/projectStore.js';
+import type { ColumnSchema, DatasetSchema, IndexType } from '../../types/index.js';
+import { GeneratorPicker, getFakerMappingLabel, LOCALE_FLAG } from './GeneratorPicker.js';
+import { ConditionBuilder } from './ConditionBuilder.js';
+import { saveSchema, updateSchema } from '../../api/client.js';
+
+export function SchemaEditor() {
+  const { schema, schemaServerSaved, updateColumn, addColumn, removeColumn, setSchema, setStep, addRule, removeRule } = useAppStore();
+  const { project } = useProjectStore();
+  // All tables from the project (for cross-table FK pool selection)
+  const allProjectTables = project?.tables ?? [];
+
+  const [pickerColId, setPickerColId] = useState<string | null>(null);
+  const [showConditionBuilder, setShowConditionBuilder] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!schema) return null;
+
+  const pickerCol = pickerColId ? schema.columns.find(c => c.id === pickerColId) : null;
+
+  async function handleNext() {
+    if (!schema) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = { name: schema.name, columns: schema.columns, rules: schema.rules, sourceType: schema.sourceType };
+      const saved = schemaServerSaved
+        ? await updateSchema(schema.id, payload)
+        : await saveSchema(payload);
+      setSchema(saved, true);
+      setStep('generate');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      {/* Main column table */}
+      <div className="flex-1 flex flex-col">
+        {/* Topbar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
+          <div className="flex items-center gap-3">
+            <Settings2 className="w-4 h-4 text-muted-foreground" />
+            <input
+              className="bg-transparent text-sm font-semibold focus:outline-none focus:border-b focus:border-primary"
+              value={schema.name}
+              onChange={e => setSchema({ ...schema, name: e.target.value })}
+            />
+            <span className="text-xs text-muted-foreground border border-border rounded px-1.5 py-0.5">
+              {schema.sourceType}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setStep('import')}
+              className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+            >
+              Back
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={saving || schema.columns.length === 0}
+              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {saving ? 'Saving...' : 'Next: Generate'}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mx-6 mt-3 bg-destructive/10 border border-destructive/30 rounded-md px-4 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto p-6">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="text-left text-xs text-muted-foreground border-b border-border">
+                <th className="pb-2 pr-4 font-medium w-48">Column Name</th>
+                <th className="pb-2 pr-4 font-medium w-28">Generator</th>
+                <th className="pb-2 pr-4 font-medium w-20">Index</th>
+                <th className="pb-2 pr-4 font-medium w-40">Pool Ref</th>
+                <th className="pb-2 pr-4 font-medium w-16">Not Null</th>
+                <th className="pb-2 pr-4 font-medium w-20">Null %</th>
+                <th className="pb-2 font-medium text-xs">Sample Values</th>
+                <th className="pb-2 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {schema.columns.map(col => (
+                <ColumnRow
+                  key={col.id}
+                  col={col}
+                  thisTable={schema}
+                  allProjectTables={allProjectTables}
+                  onUpdate={updateColumn}
+                  onPickGenerator={() => setPickerColId(col.id)}
+                  onRemove={() => removeColumn(col.id)}
+                />
+              ))}
+            </tbody>
+          </table>
+
+          {schema.columns.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground text-sm">
+              No columns yet. Add one below.
+            </div>
+          )}
+
+          <button
+            onClick={addColumn}
+            className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-md px-4 py-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add Column
+          </button>
+        </div>
+      </div>
+
+      {/* Rules sidebar */}
+      <div className="w-64 border-l border-border bg-card/30 flex flex-col">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conditions Applied</span>
+        </div>
+
+        <div className="flex-1 overflow-auto p-3 space-y-2">
+          {schema.rules.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-6">No rules yet</p>
+          )}
+          {schema.rules.map(rule => (
+            <div key={rule.id} className="bg-card border border-border rounded-md p-2.5 text-xs">
+              <div className="flex items-start justify-between gap-1">
+                <div>
+                  <span className="text-green-400 font-medium">{rule.name ?? 'Rule'}</span>
+                  <div className="text-muted-foreground mt-1">
+                    {rule.conditions.map((c, i) => (
+                      <span key={i}>
+                        {i > 0 && <span className="text-primary"> AND </span>}
+                        <span className="text-foreground">{c.column}</span>{' '}
+                        <span className="text-muted-foreground">{c.op}</span>{' '}
+                        {c.value !== undefined && <span className="text-yellow-300">"{String(c.value)}"</span>}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="text-muted-foreground mt-1">
+                    → <span className="text-foreground">{rule.actionColumn}</span>{' '}
+                    <span className="text-muted-foreground">{rule.action}</span>
+                  </div>
+                </div>
+                <button onClick={() => removeRule(rule.id)} className="text-muted-foreground hover:text-destructive">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-3 border-t border-border">
+          <button
+            onClick={() => setShowConditionBuilder(true)}
+            className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-accent text-sm py-2 rounded-md transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Rule
+          </button>
+        </div>
+      </div>
+
+      {/* Generator picker modal */}
+      {pickerCol && (
+        <GeneratorPicker
+          current={pickerCol.dataType}
+          currentFakerFn={pickerCol.generatorConfig.fakerFn}
+          currentLocale={pickerCol.generatorConfig.locale}
+          columnName={pickerCol.name}
+          onSelect={(type, config) => {
+            updateColumn({
+              ...pickerCol,
+              dataType: type,
+              generatorConfig: { ...config, nullRate: pickerCol.generatorConfig.nullRate ?? 0 },
+            });
+            setPickerColId(null);
+          }}
+          onClose={() => setPickerColId(null)}
+        />
+      )}
+
+      {/* Condition builder modal */}
+      {showConditionBuilder && (
+        <ConditionBuilder
+          columns={schema.columns}
+          onSave={rule => {
+            addRule(rule);
+            setShowConditionBuilder(false);
+          }}
+          onClose={() => setShowConditionBuilder(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Column row ────────────────────────────────────────────────────────────────
+
+interface RowProps {
+  col: ColumnSchema;
+  thisTable: DatasetSchema;
+  allProjectTables: DatasetSchema[];
+  onUpdate: (col: ColumnSchema) => void;
+  onPickGenerator: () => void;
+  onRemove: () => void;
+}
+
+// Collects all PK columns across all tables as { poolRef: "Table.col", label: "Table.col" }
+function buildPoolOptions(allTables: DatasetSchema[], currentTableId: string) {
+  const options: { value: string; label: string }[] = [];
+  for (const table of allTables) {
+    for (const c of table.columns) {
+      if (c.indexType === 'primary_key') {
+        const ref = `${table.name}.${c.name}`;
+        const isSame = table.id === currentTableId;
+        options.push({ value: ref, label: isSame ? `${ref} (this table)` : ref });
+      }
+    }
+  }
+  return options;
+}
+
+function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator, onRemove }: RowProps) {
+  // All PK pools available across the project
+  const poolOptions = buildPoolOptions(
+    allProjectTables.length > 0 ? allProjectTables : [thisTable],
+    thisTable.id,
+  );
+
+  return (
+    <tr className="border-b border-border/50 hover:bg-card/50 group">
+      {/* Name */}
+      <td className="py-2 pr-4">
+        <input
+          className="bg-transparent w-full focus:outline-none focus:border-b focus:border-primary text-sm font-mono"
+          value={col.name}
+          onChange={e => onUpdate({ ...col, name: e.target.value })}
+        />
+      </td>
+
+      {/* Generator */}
+      <td className="py-2 pr-4">
+        <button
+          onClick={onPickGenerator}
+          className="flex flex-col items-start gap-0.5 text-xs bg-muted hover:bg-accent border border-border rounded px-2 py-1.5 transition-colors min-w-[96px]"
+        >
+          <div className="flex items-center gap-1">
+            <span className="font-mono text-primary">{col.dataType}</span>
+            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+          </div>
+          <div className="flex items-center gap-1">
+            {col.generatorConfig.fakerFn && (
+              <span className="text-[10px] text-muted-foreground leading-tight truncate max-w-[90px]">
+                {getFakerMappingLabel(col.generatorConfig.fakerFn) ?? col.generatorConfig.fakerFn}
+              </span>
+            )}
+            {col.generatorConfig.locale && col.generatorConfig.locale !== 'en_US' && (
+              <span className="text-[11px]" title={col.generatorConfig.locale}>
+                {LOCALE_FLAG(col.generatorConfig.locale)}
+              </span>
+            )}
+          </div>
+        </button>
+      </td>
+
+      {/* Index */}
+      <td className="py-2 pr-4">
+        <select
+          className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+          value={col.indexType}
+          onChange={e => {
+            const idx = e.target.value as IndexType;
+            const defaultPool = poolOptions.find(p => !p.label.includes('this table'))?.value
+              ?? poolOptions[0]?.value
+              ?? '';
+            onUpdate({
+              ...col,
+              indexType: idx,
+              // PK: register as "TableName.colName" pool
+              poolName: idx === 'primary_key' ? `${thisTable.name}.${col.name}` : undefined,
+              generatorConfig: idx === 'foreign_key'
+                ? { ...col.generatorConfig, poolRef: defaultPool }
+                : { ...col.generatorConfig, poolRef: undefined },
+            });
+          }}
+        >
+          <option value="none">—</option>
+          <option value="primary_key">PK</option>
+          <option value="unique">UQ</option>
+          <option value="foreign_key">FK</option>
+        </select>
+      </td>
+
+      {/* Pool ref (FK: cross-table dropdown; PK: show pool name) */}
+      <td className="py-2 pr-4">
+        {col.indexType === 'foreign_key' ? (
+          <select
+            className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary w-full max-w-[160px]"
+            value={col.generatorConfig.poolRef ?? ''}
+            onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, poolRef: e.target.value } })}
+          >
+            <option value="">— select pool —</option>
+            {poolOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : col.indexType === 'primary_key' && col.poolName ? (
+          <span className="text-xs font-mono text-yellow-500/80">{col.poolName}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs">—</span>
+        )}
+      </td>
+
+      {/* Not Null */}
+      <td className="py-2 pr-4">
+        <input
+          type="checkbox"
+          checked={col.notNull}
+          onChange={e => onUpdate({ ...col, notNull: e.target.checked })}
+          className="accent-primary"
+        />
+      </td>
+
+      {/* Null % */}
+      <td className="py-2 pr-4">
+        <input
+          type="number"
+          min={0} max={100} step={5}
+          className="bg-transparent text-xs border border-border rounded px-1.5 py-1 w-16 focus:outline-none focus:ring-1 focus:ring-primary"
+          value={Math.round((col.generatorConfig.nullRate ?? 0) * 100)}
+          disabled={col.notNull}
+          onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, nullRate: Number(e.target.value) / 100 } })}
+        />
+      </td>
+
+      {/* Sample values */}
+      <td className="py-2 pr-4">
+        {col.sampleValues && col.sampleValues.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {col.sampleValues.slice(0, 3).map((v, i) => (
+              <span key={i} className="text-xs bg-muted border border-border rounded px-1.5 py-0.5 font-mono text-muted-foreground">
+                {String(v).slice(0, 16)}
+              </span>
+            ))}
+          </div>
+        )}
+      </td>
+
+      {/* Delete */}
+      <td className="py-2">
+        <button
+          onClick={onRemove}
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </td>
+    </tr>
+  );
+}
