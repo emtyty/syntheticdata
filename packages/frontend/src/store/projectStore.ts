@@ -8,6 +8,8 @@ interface ProjectStore {
   jobId: string | null;
   jobSeed: number | null;
   jobResults: Record<string, GeneratedRow[]> | null;
+  /** tableId → configured row count, kept in sync by MultiTableGenerate */
+  tableRowCounts: Record<string, number>;
 
   setProject: (p: Project) => void;
   setActiveTableId: (id: string | null) => void;
@@ -16,6 +18,7 @@ interface ProjectStore {
   addTable: (table: DatasetSchema) => void;
   removeTable: (tableId: string) => void;
   setJobResult: (jobId: string, seed: number, results: Record<string, GeneratedRow[]>) => void;
+  setTableRowCounts: (counts: Record<string, number>) => void;
   reset: () => void;
 }
 
@@ -26,6 +29,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   jobId: null,
   jobSeed: null,
   jobResults: null,
+  tableRowCounts: {},
 
   setProject: (project) => set({ project }),
   setActiveTableId: (activeTableId) => set({ activeTableId }),
@@ -56,6 +60,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     }),
 
   setJobResult: (jobId, jobSeed, jobResults) => set({ jobId, jobSeed, jobResults }),
+  setTableRowCounts: (tableRowCounts) => set({ tableRowCounts }),
 
   reset: () =>
     set({
@@ -65,5 +70,6 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       jobId: null,
       jobSeed: null,
       jobResults: null,
+      tableRowCounts: {},
     }),
 }));

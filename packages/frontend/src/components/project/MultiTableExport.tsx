@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Download, ChevronDown, ChevronRight, FileText, Braces, Database } from 'lucide-react';
-import { projectZipUrl } from '../../api/client.js';
+import { Download, ChevronDown, ChevronRight, FileText, Braces, Database, HardDrive } from 'lucide-react';
+import { projectZipUrl, projectSqliteUrl } from '../../api/client.js';
 import { useProjectStore } from '../../store/projectStore.js';
 
-type ExportFormat = 'csv' | 'json' | 'sql';
+type ExportFormat = 'csv' | 'json' | 'sql' | 'sqlite';
 
 const FORMAT_OPTIONS: { value: ExportFormat; label: string; icon: React.ReactNode; desc: string }[] = [
   {
@@ -23,6 +23,12 @@ const FORMAT_OPTIONS: { value: ExportFormat; label: string; icon: React.ReactNod
     label: 'SQL',
     icon: <Database className="w-4 h-4" />,
     desc: 'INSERT statements per table',
+  },
+  {
+    value: 'sqlite',
+    label: 'SQLite',
+    icon: <HardDrive className="w-4 h-4" />,
+    desc: 'Single .db file — queryable in-app',
   },
 ];
 
@@ -44,7 +50,11 @@ export function MultiTableExport() {
 
   function handleDownload() {
     if (!jobId) return;
-    window.open(projectZipUrl(jobId, format));
+    if (format === 'sqlite') {
+      window.open(projectSqliteUrl(jobId));
+    } else {
+      window.open(projectZipUrl(jobId, format));
+    }
   }
 
   if (!jobId || !jobResults) {
@@ -116,8 +126,13 @@ export function MultiTableExport() {
           className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
         >
           <Download className="w-4 h-4" />
-          Download ZIP ({format.toUpperCase()})
+          {format === 'sqlite' ? 'Download .db (SQLite)' : `Download ZIP (${format.toUpperCase()})`}
         </button>
+        {format === 'sqlite' && (
+          <p className="text-xs text-center text-muted-foreground">
+            Or use the <strong>Query</strong> tab to explore data interactively.
+          </p>
+        )}
 
         {/* Preview toggle */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">

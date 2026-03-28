@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { getProject, updateProject } from '../api/client.js';
@@ -9,18 +10,17 @@ import { TableSidebar } from '../components/project/TableSidebar.js';
 import { DiagramView } from '../components/project/DiagramView.js';
 import { MultiTableGenerate } from '../components/project/MultiTableGenerate.js';
 import { MultiTableExport } from '../components/project/MultiTableExport.js';
+import { QueryPanel } from '../components/project/QueryPanel.js';
 import { SchemaEditor } from '../components/schema/SchemaEditor.js';
 
-interface Props {
-  projectId: string;
-  onBack: () => void;
-}
+const VALID_TABS = new Set<ProjectTab>(['tables', 'diagram', 'generate', 'export', 'query']);
 
 const TABS: { id: ProjectTab; label: string }[] = [
   { id: 'tables', label: 'Tables' },
   { id: 'diagram', label: 'Diagram' },
   { id: 'generate', label: 'Generate' },
   { id: 'export', label: 'Export' },
+  { id: 'query', label: 'Query' },
 ];
 
 function makeEmptyTable(): DatasetSchema {
@@ -35,11 +35,22 @@ function makeEmptyTable(): DatasetSchema {
   };
 }
 
-export function ProjectEditor({ projectId, onBack }: Props) {
+// No props — everything comes from URL params
+export function ProjectEditor() {
+  const { projectId = '', tab } = useParams<{ projectId: string; tab: string }>();
+  const navigate = useNavigate();
+
+  // Resolve active tab from URL; fall back to 'tables'
+  const activeTab: ProjectTab =
+    tab && VALID_TABS.has(tab as ProjectTab) ? (tab as ProjectTab) : 'tables';
+
+  function navigateTab(t: ProjectTab) {
+    navigate(`/projects/${projectId}/${t}`);
+  }
+
   const {
     project,
     activeTableId,
-    activeTab,
     setProject,
     setActiveTableId,
     setActiveTab,
@@ -49,7 +60,6 @@ export function ProjectEditor({ projectId, onBack }: Props) {
     reset,
   } = useProjectStore();
 
-  // AppStore is used by the embedded SchemaEditor for single-table editing
   const { setSchema, schema: appSchema } = useAppStore();
 
   const [projectName, setProjectName] = useState('');
@@ -58,7 +68,29 @@ export function ProjectEditor({ projectId, onBack }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Load project on mount
+  // Keep projectStore's activeTab in sync with the URL (for child components that read it)
+  useEffect(() => {
+    setActiveTab(activeTab);
+  }, [activeTab, setActiveTab]);
+
+  // When a child component calls setActiveTab (e.g. SchemaEditor "Go to Generate"),
+  // mirror that to the URL so the browser reflects the change.
+  // Skip on first render: storeTab may carry a stale value from a previously-opened
+  // project, which would redirect the user away from the intended tab.
+  const { activeTab: storeTab } = useProjectStore();
+  const storeTabMounted = useRef(false);
+  useEffect(() => {
+    if (!storeTabMounted.current) {
+      storeTabMounted.current = true;
+      return;
+    }
+    if (storeTab !== activeTab) {
+      navigateTab(storeTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeTab]);
+
+  // Load project when projectId changes
   useEffect(() => {
     reset();
     setLoading(true);
@@ -66,43 +98,34 @@ export function ProjectEditor({ projectId, onBack }: Props) {
       .then((p) => {
         setProject(p);
         setProjectName(p.name);
-        if (p.tables.length > 0) {
-          setActiveTableId(p.tables[0].id);
-        }
+        if (p.tables.length > 0) setActiveTableId(p.tables[0].id);
       })
       .catch((e: Error) => setLoadError(e.message))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  // Sync active table to AppStore's schema for SchemaEditor
+  // Sync active table → AppStore schema (for SchemaEditor)
   useEffect(() => {
     if (!project || !activeTableId) return;
     const table = project.tables.find((t) => t.id === activeTableId);
-    if (table) {
-      // Mark as server-saved so SchemaEditor uses updateSchema instead of saveSchema
-      setSchema(table, true);
-    }
+    if (table) setSchema(table, true);
   }, [activeTableId, project, setSchema]);
 
-  // Sync AppStore schema changes back to ProjectStore
+  // Sync AppStore schema edits → ProjectStore
   useEffect(() => {
     if (!appSchema || !activeTableId) return;
     if (appSchema.id !== activeTableId) return;
     updateTable(appSchema);
-    // We want this to run whenever appSchema changes (column edits, etc.)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appSchema]);
 
   const handleAddTable = useCallback(() => {
-    const table = makeEmptyTable();
-    addTable(table);
+    addTable(makeEmptyTable());
   }, [addTable]);
 
   const handleDeleteTable = useCallback(
-    (id: string) => {
-      removeTable(id);
-    },
+    (id: string) => removeTable(id),
     [removeTable],
   );
 
@@ -123,74 +146,78 @@ export function ProjectEditor({ projectId, onBack }: Props) {
 
   const handleTableClick = useCallback(
     (tableId: string) => {
-      setActiveTab('tables');
+      navigateTab('tables');
       setActiveTableId(tableId);
     },
-    [setActiveTab, setActiveTableId],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projectId, setActiveTableId],
   );
 
-  // Loading / error states
+  // ── Loading / error states ─────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen text-muted-foreground gap-2">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        Loading project...
+      <div className="flex items-center justify-center h-screen bg-[#0a0e14] text-on-surface-variant gap-3 font-label text-[11px] uppercase tracking-widest">
+        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+        Loading project…
       </div>
     );
   }
 
   if (loadError || !project) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-3">
-        <p className="text-destructive text-sm">{loadError ?? 'Project not found'}</p>
-        <button onClick={onBack} className="text-sm text-primary hover:underline">
-          Back to Projects
-        </button>
+      <div className="flex flex-col items-center justify-center h-screen bg-[#0a0e14] gap-4">
+        <p className="text-error text-sm font-label">{loadError ?? 'Project not found'}</p>
+        <Link to="/" className="text-[11px] font-label uppercase tracking-widest text-primary hover:underline">
+          ← Back to Projects
+        </Link>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      {/* Header */}
-      <header className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-border bg-card/50">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Projects
-        </button>
+  // ── Main layout ────────────────────────────────────────────────────────────
 
-        <span className="text-border">|</span>
+  return (
+    <div className="flex flex-col h-screen overflow-hidden bg-[#0a0e14]">
+      {/* Header */}
+      <header className="shrink-0 flex items-center gap-3 px-4 h-14 border-b border-[#151a21] bg-[#0a0e14]/95 backdrop-blur-md">
+        <Link
+          to="/"
+          className="flex items-center gap-1.5 text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Projects
+        </Link>
+
+        <span className="text-[#44484f]">|</span>
 
         {/* Editable project name */}
         <input
-          className="bg-transparent text-sm font-semibold focus:outline-none focus:border-b focus:border-primary min-w-0 flex-1 max-w-xs"
+          className="bg-transparent text-sm font-semibold font-headline focus:outline-none focus:border-b focus:border-primary min-w-0 flex-1 max-w-xs text-on-surface"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
           onBlur={handleSave}
           onKeyDown={(e) => e.key === 'Enter' && handleSave()}
         />
 
-        <span className="text-xs text-muted-foreground hidden sm:block">
+        <span className="text-[10px] font-label text-on-surface-variant hidden sm:block uppercase tracking-widest">
           {project.tables.length} {project.tables.length === 1 ? 'table' : 'tables'}
         </span>
 
         {/* Tab switcher */}
-        <nav className="flex items-center gap-1 mx-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-primary/20 text-primary font-medium'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        <nav className="flex items-center gap-0.5 mx-auto">
+          {TABS.map((t) => (
+            <Link
+              key={t.id}
+              to={`/projects/${projectId}/${t.id}`}
+              className={`px-3 py-1.5 font-label text-[10px] uppercase tracking-widest rounded transition-colors ${
+                activeTab === t.id
+                  ? 'bg-[#151a21] text-[#2E5BFF] border-b-2 border-[#2E5BFF] font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-[#1b2028]'
               }`}
             >
-              {tab.label}
-            </button>
+              {t.label}
+            </Link>
           ))}
         </nav>
 
@@ -198,7 +225,7 @@ export function ProjectEditor({ projectId, onBack }: Props) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-1.5 text-sm bg-primary text-primary-foreground px-3 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-label uppercase tracking-widest bg-primary text-on-primary-fixed px-4 py-2 rounded-md hover:brightness-110 disabled:opacity-50 transition-all"
         >
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
           Save
@@ -206,14 +233,13 @@ export function ProjectEditor({ projectId, onBack }: Props) {
       </header>
 
       {saveError && (
-        <div className="shrink-0 mx-4 mt-2 bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2 text-xs text-destructive">
+        <div className="shrink-0 mx-4 mt-2 bg-error/10 border border-error/30 rounded-md px-3 py-2 text-xs text-error font-label">
           {saveError}
         </div>
       )}
 
       {/* Main content */}
       <main className="flex-1 overflow-hidden">
-        {/* Tables tab: sidebar + SchemaEditor */}
         {activeTab === 'tables' && (
           <div className="flex h-full">
             <TableSidebar
@@ -223,39 +249,44 @@ export function ProjectEditor({ projectId, onBack }: Props) {
               onAddTable={handleAddTable}
               onDeleteTable={handleDeleteTable}
             />
-
             <div className="flex-1 overflow-hidden">
               {activeTableId && project.tables.find((t) => t.id === activeTableId) ? (
                 <SchemaEditor />
               ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-                  {project.tables.length === 0
-                    ? 'Add a table to get started'
-                    : 'Select a table from the sidebar'}
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <span className="material-symbols-outlined text-[40px] text-on-surface-variant/30">
+                    {project.tables.length === 0 ? 'add_box' : 'table_chart'}
+                  </span>
+                  <p className="text-[11px] font-label uppercase tracking-widest text-on-surface-variant/60">
+                    {project.tables.length === 0 ? 'Add a table to get started' : 'Select a table from the sidebar'}
+                  </p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Diagram tab */}
         {activeTab === 'diagram' && (
           <div className="h-full">
             <DiagramView onTableClick={handleTableClick} onAddTable={handleAddTable} />
           </div>
         )}
 
-        {/* Generate tab */}
         {activeTab === 'generate' && (
           <div className="h-full overflow-auto">
             <MultiTableGenerate />
           </div>
         )}
 
-        {/* Export tab */}
         {activeTab === 'export' && (
           <div className="h-full overflow-auto">
             <MultiTableExport />
+          </div>
+        )}
+
+        {activeTab === 'query' && (
+          <div className="h-full overflow-hidden">
+            <QueryPanel />
           </div>
         )}
       </main>

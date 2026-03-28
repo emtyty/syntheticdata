@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { Plus, Trash2, ChevronRight, Settings2, ArrowRight } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, Settings2, ArrowRight, SlidersHorizontal } from 'lucide-react';
 import { useAppStore } from '../../store/appStore.js';
 import { useProjectStore } from '../../store/projectStore.js';
 import type { ColumnSchema, DatasetSchema, IndexType } from '../../types/index.js';
 import { GeneratorPicker, getFakerMappingLabel, LOCALE_FLAG } from './GeneratorPicker.js';
 import { ConditionBuilder } from './ConditionBuilder.js';
+import { FkConfigModal } from './FkConfigModal.js';
 import { saveSchema, updateSchema } from '../../api/client.js';
 
 export function SchemaEditor() {
   const { schema, schemaServerSaved, updateColumn, addColumn, removeColumn, setSchema, setStep, addRule, removeRule } = useAppStore();
-  const { project } = useProjectStore();
+  const { project, tableRowCounts, setActiveTab } = useProjectStore();
   // All tables from the project (for cross-table FK pool selection)
   const allProjectTables = project?.tables ?? [];
 
   const [pickerColId, setPickerColId] = useState<string | null>(null);
+  const [fkConfigColId, setFkConfigColId] = useState<string | null>(null);
   const [showConditionBuilder, setShowConditionBuilder] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,18 +23,29 @@ export function SchemaEditor() {
   if (!schema) return null;
 
   const pickerCol = pickerColId ? schema.columns.find(c => c.id === pickerColId) : null;
+  const fkConfigCol = fkConfigColId ? schema.columns.find(c => c.id === fkConfigColId) : null;
+
+  // True when SchemaEditor is embedded inside the project editor (the table
+  // lives in the project store, not in the standalone schemas store).
+  const isProjectTable = !!project?.tables.some(t => t.id === schema?.id);
 
   async function handleNext() {
     if (!schema) return;
     setSaving(true);
     setError(null);
     try {
-      const payload = { name: schema.name, columns: schema.columns, rules: schema.rules, sourceType: schema.sourceType };
-      const saved = schemaServerSaved
-        ? await updateSchema(schema.id, payload)
-        : await saveSchema(payload);
-      setSchema(saved, true);
-      setStep('generate');
+      if (isProjectTable) {
+        // In project context: the table is already synced to the project store
+        // via the useEffect in ProjectEditor. Just navigate to the Generate tab.
+        setActiveTab('generate');
+      } else {
+        const payload = { name: schema.name, columns: schema.columns, rules: schema.rules, sourceType: schema.sourceType };
+        const saved = schemaServerSaved
+          ? await updateSchema(schema.id, payload)
+          : await saveSchema(payload);
+        setSchema(saved, true);
+        setStep('generate');
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -58,18 +71,20 @@ export function SchemaEditor() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setStep('import')}
-              className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
-            >
-              Back
-            </button>
+            {!isProjectTable && (
+              <button
+                onClick={() => setStep('import')}
+                className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+              >
+                Back
+              </button>
+            )}
             <button
               onClick={handleNext}
               disabled={saving || schema.columns.length === 0}
               className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {saving ? 'Saving...' : 'Next: Generate'}
+              {saving ? 'Saving...' : isProjectTable ? 'Go to Generate' : 'Next: Generate'}
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -105,6 +120,7 @@ export function SchemaEditor() {
                   allProjectTables={allProjectTables}
                   onUpdate={updateColumn}
                   onPickGenerator={() => setPickerColId(col.id)}
+                  onOpenFkConfig={() => setFkConfigColId(col.id)}
                   onRemove={() => removeColumn(col.id)}
                 />
               ))}
@@ -193,6 +209,17 @@ export function SchemaEditor() {
         />
       )}
 
+      {/* FK config modal */}
+      {fkConfigCol && (
+        <FkConfigModal
+          col={fkConfigCol}
+          allTables={allProjectTables.length > 0 ? allProjectTables : [schema]}
+          rowCounts={tableRowCounts}
+          onSave={updated => { updateColumn(updated); setFkConfigColId(null); }}
+          onClose={() => setFkConfigColId(null)}
+        />
+      )}
+
       {/* Condition builder modal */}
       {showConditionBuilder && (
         <ConditionBuilder
@@ -216,6 +243,7 @@ interface RowProps {
   allProjectTables: DatasetSchema[];
   onUpdate: (col: ColumnSchema) => void;
   onPickGenerator: () => void;
+  onOpenFkConfig: () => void;
   onRemove: () => void;
 }
 
@@ -234,7 +262,7 @@ function buildPoolOptions(allTables: DatasetSchema[], currentTableId: string) {
   return options;
 }
 
-function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator, onRemove }: RowProps) {
+function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator, onOpenFkConfig, onRemove }: RowProps) {
   // All PK pools available across the project
   const poolOptions = buildPoolOptions(
     allProjectTables.length > 0 ? allProjectTables : [thisTable],
@@ -305,19 +333,32 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
         </select>
       </td>
 
-      {/* Pool ref (FK: cross-table dropdown; PK: show pool name) */}
+      {/* Pool ref (FK: cross-table dropdown + gear; PK: show pool name) */}
       <td className="py-2 pr-4">
         {col.indexType === 'foreign_key' ? (
-          <select
-            className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary w-full max-w-[160px]"
-            value={col.generatorConfig.poolRef ?? ''}
-            onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, poolRef: e.target.value } })}
-          >
-            <option value="">— select pool —</option>
-            {poolOptions.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-1">
+            <select
+              className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary max-w-[130px]"
+              value={col.generatorConfig.poolRef ?? ''}
+              onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, poolRef: e.target.value } })}
+            >
+              <option value="">— select pool —</option>
+              {poolOptions.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={onOpenFkConfig}
+              title="FK distribution config"
+              className={`p-1 rounded hover:bg-muted transition-colors ${
+                col.generatorConfig.fkDistribution && col.generatorConfig.fkDistribution !== 'uniform'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+            </button>
+          </div>
         ) : col.indexType === 'primary_key' && col.poolName ? (
           <span className="text-xs font-mono text-yellow-500/80">{col.poolName}</span>
         ) : (

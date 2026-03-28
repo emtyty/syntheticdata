@@ -34,16 +34,31 @@ export interface GeneratorConfig {
   maxLength?: number;
   // regex
   pattern?: string;
-  // FK / pool
+  // FK / pool (legacy)
   poolRef?: string;            // e.g. "products.id"
   poolSampling?: PoolSampling;
   // nulls
   nullRate?: number;           // 0–1, forced 0 when notNull
   // explicit Faker function override (e.g. "person.fullName", "location.city")
-  // takes priority over semantic column-name detection
   fakerFn?: string;
   // locale (Faker)
   locale?: string;
+
+  // ── Advanced FK controls (Phase 3) ──────────────────────────────────────────
+  /** Fraction of FK rows that will be null (0–1). Applied before pool sampling. */
+  fkNullRate?: number;
+  /** Distribution strategy for picking from the parent pool. */
+  fkDistribution?: 'uniform' | 'weighted' | 'fixed_per_parent';
+  /** For fixed_per_parent: how many child rows each parent receives (inclusive). */
+  fkChildrenPerParent?: { min: number; max: number };
+  /**
+   * For weighted distribution only. Must be used together with fkFixedValues
+   * (values must be known at design time — dynamic UUID/int pools can't carry
+   * per-value weights because the values aren't known until generation time).
+   */
+  fkValueWeights?: Array<{ value: string; weight: number }>;
+  /** Restrict the FK pool to this explicit subset of parent values. */
+  fkFixedValues?: string[];
 }
 
 export interface ColumnSchema {
@@ -115,7 +130,7 @@ export interface Project {
 
 // ─── Generation Job ───────────────────────────────────────────────────────────
 
-export type JobStatus = 'pending' | 'running' | 'done' | 'error';
+export type JobStatus = 'pending' | 'running' | 'done' | 'error' | 'cancelled' | 'expired';
 
 export type GeneratedRow = Record<string, string | number | boolean | null>;
 
@@ -126,17 +141,18 @@ export interface TableRowConfig {
 
 export interface GenerationJob {
   id: string;
-  // single-table (legacy)
+  // single-table
   schemaId?: string;
   rowCount?: number;
-  result?: GeneratedRow[];
+  resultPath?: string;                        // path to JSONL temp file
   // multi-table project
   projectId?: string;
   tableConfigs?: TableRowConfig[];
-  results?: Record<string, GeneratedRow[]>;   // tableId → rows
+  resultPaths?: Record<string, string>;       // tableId → JSONL path
   // common
   status: JobStatus;
-  progress: number;             // 0–100
+  progress: number;                           // 0–100
+  completedRows?: number;                     // for ETA display
   seed: number;
   errorMessage?: string;
   createdAt: string;
@@ -162,4 +178,20 @@ export interface InferredSchema {
   columns: Omit<ColumnSchema, 'id'>[];
   rowCount: number;
   warnings: string[];
+}
+
+// ─── Error types ──────────────────────────────────────────────────────────────
+
+export class CircularDependencyError extends Error {
+  constructor(public readonly cycle: string[]) {
+    super(`Circular FK dependency detected: ${cycle.join(' → ')}`);
+    this.name = 'CircularDependencyError';
+  }
+}
+
+export class GenerationCancelledError extends Error {
+  constructor() {
+    super('Generation was cancelled.');
+    this.name = 'GenerationCancelledError';
+  }
 }

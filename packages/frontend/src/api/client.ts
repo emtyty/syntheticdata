@@ -50,14 +50,26 @@ export async function startGeneration(schemaId: string, rowCount: number, seed?:
   return data.data;
 }
 
-export async function pollJobStatus(jobId: string): Promise<{ status: string; progress: number; errorMessage?: string }> {
+export async function pollJobStatus(jobId: string): Promise<{
+  status: string; progress: number; completedRows: number; rowCount?: number; errorMessage?: string;
+}> {
   const { data } = await api.get(`/generate/${jobId}/status`);
   return data.data;
 }
 
-export async function pollProjectJobStatus(jobId: string): Promise<{ status: string; progress: number; errorMessage?: string }> {
+export async function pollProjectJobStatus(jobId: string): Promise<{
+  status: string; progress: number; completedRows: number; totalRows: number; errorMessage?: string;
+}> {
   const { data } = await api.get(`/generate/project/${jobId}/status`);
   return data.data;
+}
+
+export async function cancelJob(jobId: string): Promise<void> {
+  await api.delete(`/generate/${jobId}`);
+}
+
+export async function cancelProjectJob(jobId: string): Promise<void> {
+  await api.delete(`/generate/project/${jobId}`);
 }
 
 export async function getPreview(jobId: string, rows = 20): Promise<GeneratedRow[]> {
@@ -122,6 +134,21 @@ export async function getProjectPreview(jobId: string, rows = 20): Promise<Recor
 
 export function projectZipUrl(jobId: string, format: 'csv' | 'json' | 'sql'): string {
   return `/api/v1/export/project/${jobId}/zip?format=${format}`;
+}
+
+export function projectSqliteUrl(jobId: string): string {
+  return `/api/v1/export/project/${jobId}/sqlite`;
+}
+
+export async function queryProjectData(
+  jobId: string,
+  sql: string,
+): Promise<{ rows: Record<string, unknown>[]; columns: string[] }> {
+  const { data } = await api.post<{ ok: true; data: { rows: Record<string, unknown>[]; columns: string[] } }>(
+    `/query/project/${jobId}`,
+    { sql },
+  );
+  return data.data;
 }
 
 // ─── Export download helpers ──────────────────────────────────────────────────

@@ -4,23 +4,24 @@
 
 @layer base {
   :root {
-    --background: 222 47% 11%;
-    --foreground: 213 31% 91%;
-    --card: 222 47% 15%;
-    --card-foreground: 213 31% 91%;
-    --border: 216 34% 25%;
-    --input: 216 34% 20%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 216 34% 25%;
-    --secondary-foreground: 213 31% 91%;
-    --muted: 223 47% 20%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 216 34% 25%;
-    --accent-foreground: 213 31% 91%;
-    --destructive: 0 63% 55%;
-    --destructive-foreground: 213 31% 91%;
-    --radius: 0.5rem;
+    /* Neon Architect palette mapped to shadcn CSS variable slots */
+    --background: 214 33% 6%;       /* #0a0e14 */
+    --foreground: 227 57% 96%;      /* #f1f3fc */
+    --card: 214 22% 11%;            /* #151a21 */
+    --card-foreground: 227 57% 96%;
+    --border: 218 7% 29%;           /* #44484f */
+    --input: 214 22% 11%;
+    --primary: 220 100% 76%;        /* #85adff */
+    --primary-foreground: 0 0% 0%;  /* #000000 */
+    --secondary: 214 19% 16%;       /* #20262f */
+    --secondary-foreground: 227 57% 96%;
+    --muted: 218 19% 13%;           /* #1b2028 */
+    --muted-foreground: 222 5% 68%; /* #a8abb3 */
+    --accent: 217 17% 18%;          /* #262c36 */
+    --accent-foreground: 227 57% 96%;
+    --destructive: 350 100% 72%;    /* #ff6e84 */
+    --destructive-foreground: 0 0% 0%;
+    --radius: 0.25rem;
   }
 }
 
@@ -28,13 +29,22 @@
   border-color: hsl(var(--border));
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+::-webkit-scrollbar-track { background: #0a0e14; }
+::-webkit-scrollbar-thumb { background: #44484f; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #85adff44; }

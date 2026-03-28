@@ -22,6 +22,12 @@ const GeneratorConfigSchema = z.object({
   nullRate: z.number().min(0).max(1).optional(),
   fakerFn: z.string().optional(),
   locale: z.string().optional(),
+  // Advanced FK controls (Phase 3)
+  fkNullRate: z.number().min(0).max(1).optional(),
+  fkDistribution: z.enum(['uniform', 'weighted', 'fixed_per_parent']).optional(),
+  fkChildrenPerParent: z.object({ min: z.number().int().min(0), max: z.number().int().min(1) }).optional(),
+  fkValueWeights: z.array(z.object({ value: z.string(), weight: z.number() })).optional(),
+  fkFixedValues: z.array(z.string()).optional(),
 });
 
 const ColumnSchemaZ = z.object({
@@ -54,7 +60,7 @@ const DatasetSchemaZ = z.object({
   name: z.string().min(1),
   columns: z.array(ColumnSchemaZ),
   rules: z.array(ConditionalRuleZ),
-  sourceType: z.enum(['upload','manual','sql']),
+  sourceType: z.enum(['upload','manual','sql','prisma']),
 });
 
 function buildPoolNames(columns: ColumnSchema[]): ColumnSchema[] {

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-primary-container": "#002150",
+              "secondary-fixed-dim": "#cad5ed",
+              "secondary-fixed": "#d8e3fb",
+              "on-tertiary-fixed": "#004145",
+              "on-primary": "#002c66",
+              "on-error": "#490013",
+              "surface-tint": "#85adff",
+              "inverse-primary": "#005bc4",
+              "primary-fixed-dim": "#5391ff",
+              "on-tertiary-fixed-variant": "#006065",
+              "on-secondary-fixed": "#354053",
+              "secondary-dim": "#cad5ed",
+              "secondary": "#d8e3fb",
+              "inverse-surface": "#f8f9ff",
+              "surface-bright": "#262c36",
+              "on-primary-fixed-variant": "#002a62",
+              "error-dim": "#d73357",
+              "tertiary-container": "#00f1fe",
+              "primary": "#85adff",
+              "on-background": "#f1f3fc",
+              "background": "#0a0e14",
+              "on-secondary-container": "#c5d1e8",
+              "on-secondary": "#475266",
+              "surface": "#0a0e14",
+              "on-error-container": "#ffb2b9",
+              "error": "#ff6e84",
+              "surface-variant": "#20262f",
+              "inverse-on-surface": "#51555d",
+              "on-tertiary": "#005f64",
+              "surface-container": "#151a21",
+              "on-primary-fixed": "#000000",
+              "tertiary-dim": "#00e2ee",
+              "surface-dim": "#0a0e14",
+              "primary-dim": "#699cff",
+              "tertiary": "#99f7ff",
+              "on-surface": "#f1f3fc",
+              "on-secondary-fixed-variant": "#515c70",
+              "secondary-container": "#3c475a",
+              "surface-container-highest": "#20262f",
+              "on-tertiary-container": "#00555a",
+              "tertiary-fixed-dim": "#00e2ee",
+              "surface-container-high": "#1b2028",
+              "on-surface-variant": "#a8abb3",
+              "surface-container-lowest": "#000000",
+              "surface-container-low": "#0f141a",
+              "primary-fixed": "#6e9fff",
+              "tertiary-fixed": "#00f1fe",
+              "error-container": "#a70138",
+              "outline-variant": "#44484f",
+              "outline": "#72757d",
+              "primary-container": "#6e9fff"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .etched-glass {
+            background: linear-gradient(135deg, rgba(38, 44, 54, 0.15) 0%, rgba(10, 14, 20, 0.05) 100%);
+            backdrop-filter: blur(12px);
+        }
+        .neon-glow:hover {
+            box-shadow: 0 0 20px rgba(133, 173, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary-fixed">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-full py-6 w-64 border-r border-outline-variant/20 bg-[#0a0e14] shrink-0">
+<div class="px-6 mb-10">
+<div class="text-xl font-bold tracking-tighter text-[#2E5BFF] font-headline mb-1">Synthetic Studio</div>
+<div class="font-label uppercase tracking-widest text-[10px] text-on-surface-variant">Data Engine v2.4</div>
+</div>
+<nav class="flex-1 px-3 space-y-1">
+<!-- Dashboard Active -->
+<a class="flex items-center px-3 py-3 gap-3 bg-[#151a21] text-[#2E5BFF] border-l-2 border-[#2E5BFF] font-bold group transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Dashboard</span>
+</a>
+<a class="flex items-center px-3 py-3 gap-3 text-slate-400 font-medium hover:text-slate-100 hover:bg-[#262c36] rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="folder_open">folder_open</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Projects</span>
+</a>
+<a class="flex items-center px-3 py-3 gap-3 text-slate-400 font-medium hover:text-slate-100 hover:bg-[#262c36] rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="database">database</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Data Sources</span>
+</a>
+<a class="flex items-center px-3 py-3 gap-3 text-slate-400 font-medium hover:text-slate-100 hover:bg-[#262c36] rounded-md transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="font-label uppercase tracking-widest text-[10px]">Settings</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-primary text-on-primary-fixed font-headline font-bold text-sm tracking-tight rounded-md flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all duration-150">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_circle">add_circle</span>
+                    New Synthesis
+                </button>
+<div class="mt-6 flex items-center gap-3 p-2 bg-surface-container rounded-lg border border-outline-variant/10">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center text-[10px] font-bold text-on-primary-container">JD</div>
+<div class="flex-1 min-w-0">
+<div class="text-[11px] font-bold truncate">User Profile Avatar</div>
+<div class="text-[9px] text-on-surface-variant font-label truncate">PREMIUM PLAN</div>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+<!-- TopNavBar -->
+<header class="flex items-center justify-between px-8 w-full h-16 sticky top-0 z-50 bg-[#0a0e14]/80 backdrop-blur-md border-b border-outline-variant/10">
+<div class="flex items-center gap-6 flex-1">
+<div class="relative w-full max-w-md group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]" data-icon="search">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg pl-10 pr-4 py-1.5 text-sm focus:ring-2 focus:ring-tertiary/50 focus:border-tertiary outline-none transition-all" placeholder="Search synthetic models..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-400 hover:text-white hover:bg-[#262c36] rounded-md transition-all duration-300">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white hover:bg-[#262c36] rounded-md transition-all duration-300">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto bg-surface">
+<!-- Hero Section -->
+<section class="relative px-8 pt-16 pb-24 overflow-hidden">
+<!-- Background aesthetic elements -->
+<div class="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 blur-[120px] -z-10 rounded-full"></div>
+<div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-tertiary/5 blur-[100px] -z-10 rounded-full"></div>
+<div class="max-w-4xl">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container border border-outline-variant/20 rounded-full mb-6">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="font-label text-[10px] tracking-widest text-on-surface-variant uppercase">Engine v2.4 Live</span>
+</div>
+<h1 class="text-6xl font-bold font-headline leading-tight tracking-tight mb-6 bg-gradient-to-br from-on-background via-on-background to-primary-fixed-dim bg-clip-text text-transparent">
+                            Generate realistic <br/>synthetic datasets
+                        </h1>
+<p class="text-lg text-on-surface-variant max-w-2xl mb-10 leading-relaxed">
+                            Engineered for high-velocity data synthesis. Automated schema inference from live sources with military-grade privacy controls. Build production-grade mock environments in seconds.
+                        </p>
+<div class="flex items-center gap-4">
+<button class="px-8 py-4 bg-primary text-on-primary-fixed font-headline font-extrabold tracking-wider text-sm rounded-md neon-glow transition-all duration-300">
+                                START SYNTHESIS
+                            </button>
+<button class="px-8 py-4 bg-surface-container border border-outline-variant/30 text-on-surface font-headline font-bold text-sm rounded-md hover:bg-surface-bright transition-all">
+                                VIEW DOCUMENTATION
+                            </button>
+</div>
+</div>
+</section>
+<!-- Quick Import Section (Bento Cards) -->
+<section class="px-8 mb-16">
+<div class="flex items-center gap-3 mb-8">
+<h2 class="font-headline text-2xl font-bold">Quick Import</h2>
+<div class="h-[1px] flex-1 bg-gradient-to-r from-outline-variant/30 to-transparent"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Card 1: Prisma -->
+<div class="group relative p-8 bg-surface-container rounded-xl border border-outline-variant/10 hover:border-primary/40 transition-all duration-300 cursor-pointer overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[120px]" data-icon="account_tree">account_tree</span>
+</div>
+<div class="relative z-10">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-6 border border-outline-variant/20">
+<span class="material-symbols-outlined text-primary" data-icon="schema">schema</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-2">Prisma Schema</h3>
+<p class="text-on-surface-variant text-sm mb-6 max-w-[280px]">Import your .prisma file to automatically generate relational synthetic snapshots.</p>
+<div class="flex items-center gap-2 text-primary font-label text-[11px] font-bold tracking-widest uppercase">
+                                    Import Schema <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+<!-- Card 2: SQL DDL -->
+<div class="group relative p-8 bg-surface-container rounded-xl border border-outline-variant/10 hover:border-tertiary/40 transition-all duration-300 cursor-pointer overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[120px]" data-icon="database">database</span>
+</div>
+<div class="relative z-10">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-6 border border-outline-variant/20">
+<span class="material-symbols-outlined text-tertiary" data-icon="terminal">terminal</span>
+</div>
+<h3 class="text-xl font-headline font-bold mb-2">SQL DDL</h3>
+<p class="text-on-surface-variant text-sm mb-6 max-w-[280px]">Paste raw SQL definitions or upload .sql dumps for instant entity mapping.</p>
+<div class="flex items-center gap-2 text-tertiary font-label text-[11px] font-bold tracking-widest uppercase">
+                                    Upload Script <span class="material-symbols-outlined text-[16px]" data-icon="arrow_forward">arrow_forward</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Projects Section (Table-like Grid) -->
+<section class="px-8 pb-20">
+<div class="flex items-center justify-between mb-8">
+<div class="flex items-center gap-3">
+<h2 class="font-headline text-2xl font-bold">Recent Projects</h2>
+<span class="px-2 py-0.5 bg-surface-container-highest rounded font-label text-[10px] text-on-surface-variant">04 TOTAL</span>
+</div>
+<button class="text-sm font-label text-primary hover:underline">VIEW ALL PROJECTS</button>
+</div>
+<div class="bg-surface-container rounded-xl border border-outline-variant/10 overflow-hidden">
+<div class="grid grid-cols-12 px-6 py-4 bg-surface-container-high border-b border-outline-variant/10 font-label text-[10px] tracking-widest uppercase text-on-surface-variant">
+<div class="col-span-5">Project Name</div>
+<div class="col-span-3 text-center">Engine / DB</div>
+<div class="col-span-2 text-right">Row Count</div>
+<div class="col-span-2 text-right">Last Sync</div>
+</div>
+<!-- Row 1 -->
+<div class="grid grid-cols-12 px-6 py-5 border-b border-outline-variant/5 hover:bg-surface-bright/30 transition-colors group cursor-pointer items-center">
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-tertiary"></div>
+<div>
+<div class="font-bold text-sm">customer_loyalty_v2</div>
+<div class="text-[10px] text-on-surface-variant font-label mt-1">UUID: 829-X02-SYN</div>
+</div>
+</div>
+<div class="col-span-3 flex justify-center">
+<span class="px-3 py-1 bg-surface-variant rounded text-[11px] font-label text-on-surface">POSTGRESQL</span>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-label text-sm">1.2M</div>
+</div>
+<div class="col-span-2 text-right text-on-surface-variant text-[11px] font-label">
+                                2m ago
+                            </div>
+</div>
+<!-- Row 2 -->
+<div class="grid grid-cols-12 px-6 py-5 border-b border-outline-variant/5 hover:bg-surface-bright/30 transition-colors group cursor-pointer items-center">
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div>
+<div class="font-bold text-sm">inventory_ledger_main</div>
+<div class="text-[10px] text-on-surface-variant font-label mt-1">UUID: 114-K82-SYN</div>
+</div>
+</div>
+<div class="col-span-3 flex justify-center">
+<span class="px-3 py-1 bg-surface-variant rounded text-[11px] font-label text-on-surface">MYSQL 8.0</span>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-label text-sm">450K</div>
+</div>
+<div class="col-span-2 text-right text-on-surface-variant text-[11px] font-label">
+                                1h ago
+                            </div>
+</div>
+<!-- Row 3 -->
+<div class="grid grid-cols-12 px-6 py-5 border-b border-outline-variant/5 hover:bg-surface-bright/30 transition-colors group cursor-pointer items-center">
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-on-surface-variant"></div>
+<div>
+<div class="font-bold text-sm">auth_audit_log_sample</div>
+<div class="text-[10px] text-on-surface-variant font-label mt-1">UUID: 002-L99-SYN</div>
+</div>
+</div>
+<div class="col-span-3 flex justify-center">
+<span class="px-3 py-1 bg-surface-variant rounded text-[11px] font-label text-on-surface">MONGODB</span>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-label text-sm">8.2M</div>
+</div>
+<div class="col-span-2 text-right text-on-surface-variant text-[11px] font-label">
+                                4h ago
+                            </div>
+</div>
+<!-- Row 4 -->
+<div class="grid grid-cols-12 px-6 py-5 hover:bg-surface-bright/30 transition-colors group cursor-pointer items-center">
+<div class="col-span-5 flex items-center gap-4">
+<div class="w-2 h-2 rounded-full bg-error"></div>
+<div>
+<div class="font-bold text-sm">billing_export_dry_run</div>
+<div class="text-[10px] text-on-surface-variant font-label mt-1">UUID: 991-P21-SYN</div>
+</div>
+</div>
+<div class="col-span-3 flex justify-center">
+<span class="px-3 py-1 bg-surface-variant rounded text-[11px] font-label text-on-surface">SQLITE</span>
+</div>
+<div class="col-span-2 text-right">
+<div class="font-label text-sm">12K</div>
+</div>
+<div class="col-span-2 text-right text-on-surface-variant text-[11px] font-label">
+                                2d ago
+                            </div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Background Image Asset (Hidden) -->
+<img alt="background pattern" class="hidden" data-alt="abstract digital visualization of complex data structures and nodes glowing in deep neon blue against dark void background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv_i13X2Do2dfON06KccSkv-ahdCQK0-uC4YHplkmTqwsAaYGdHPAAfeSCZ_Rjr9oAx97ZJM85cW2EYBLG7aUiVOQQL2qLo3JmSwPJ__FMasViGzOl1RpT8JU0avkJNek6X0XADvzEVJ__wunVSVkDBLCm_oKtlnmae7-pR7hWMttU8YKLg0mEah8Sj5ZoVTMjJ57i39SsGI9B-sU9pWbI23rBkffOoOpYjqmhYxxRtxLMeOPS80475JYdqU-1OP-CiWSNYEEtjxFb"/>
+</body></html>

@@ -33,6 +33,16 @@ export class PoolRegistry {
     return this.pools.entries();
   }
 
+  /** Append more values to an existing pool (used for cross-chunk PK registration). */
+  appendToPool(poolName: string, values: (string | number)[]): void {
+    const existing = this.pools.get(poolName);
+    if (existing) {
+      for (const v of values) existing.push(v);
+    } else {
+      this.pools.set(poolName, [...values]);
+    }
+  }
+
   /** Build pools from already-generated columns (used for FK columns referencing earlier columns in same schema) */
   buildFromRows(rows: GeneratedRow[], columnName: string, poolName: string) {
     const values = rows

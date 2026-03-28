@@ -1,32 +1,20 @@
-import { useState } from 'react';
-import type { Project } from './types/index.js';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { ProjectList } from './pages/ProjectList.js';
 import { ProjectEditor } from './pages/ProjectEditor.js';
-
-type View = 'list' | 'project';
+import { Dashboard } from './pages/Dashboard.js';
+import { Profile } from './pages/Profile.js';
 
 export default function App() {
-  const [view, setView] = useState<View>('list');
-  const [openProjectId, setOpenProjectId] = useState<string | null>(null);
-
-  function handleOpen(projectId: string) {
-    setOpenProjectId(projectId);
-    setView('project');
-  }
-
-  function handleCreate(project: Project) {
-    setOpenProjectId(project.id);
-    setView('project');
-  }
-
-  function handleBack() {
-    setView('list');
-    setOpenProjectId(null);
-  }
-
-  if (view === 'project' && openProjectId) {
-    return <ProjectEditor projectId={openProjectId} onBack={handleBack} />;
-  }
-
-  return <ProjectList onCreate={handleCreate} onOpen={handleOpen} />;
+  return (
+    <Routes>
+      <Route path="/" element={<ProjectList />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/profile" element={<Profile />} />
+      {/* Redirect bare project URL to the default tab */}
+      <Route path="/projects/:projectId" element={<Navigate to="tables" replace />} />
+      <Route path="/projects/:projectId/:tab" element={<ProjectEditor />} />
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
 }

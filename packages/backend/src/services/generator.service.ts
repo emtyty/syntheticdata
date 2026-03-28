@@ -281,6 +281,18 @@ function semanticValue(columnName: string, f: Faker): string | null {
   return factory ? String(factory(f)) : null;
 }
 
+// ─── Shared weighted-pick utility ────────────────────────────────────────────
+
+export function weightedPick<T>(items: T[], weights: number[], rng: () => number): T {
+  const total = weights.reduce((s, w) => s + w, 0);
+  let r = rng() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return items[i];
+  }
+  return items[items.length - 1];
+}
+
 // ─── Topological sort ─────────────────────────────────────────────────────────
 
 function topoSort(columns: ColumnSchema[]): ColumnSchema[] {
@@ -316,7 +328,30 @@ function generateValue(
   if (nullRate > 0 && rng() < nullRate) return null;
 
   if (col.indexType === 'foreign_key' && cfg.poolRef) {
-    const vals = pool.get(cfg.poolRef);
+    // fkNullRate: apply before pool sampling
+    const fkNull = cfg.fkNullRate ?? 0;
+    if (fkNull > 0 && rng() < fkNull) return null;
+
+    let vals = pool.get(cfg.poolRef);
+
+    // Restrict to explicit subset if provided
+    if (cfg.fkFixedValues?.length) {
+      const fixed = new Set(cfg.fkFixedValues);
+      vals = vals.filter(v => fixed.has(String(v)));
+      if (vals.length === 0) return null;
+    }
+
+    const dist = cfg.fkDistribution ?? 'uniform';
+
+    if (dist === 'weighted' && cfg.fkValueWeights?.length) {
+      return weightedPick(
+        vals,
+        vals.map(v => cfg.fkValueWeights!.find(w => w.value === String(v))?.weight ?? 1),
+        rng,
+      );
+    }
+
+    // uniform (default) — fixed_per_parent is handled at the chunk level
     return vals[Math.floor(rng() * vals.length)];
   }
 
@@ -372,13 +407,7 @@ function generateValue(
       const vals = cfg.enumValues ?? ['a', 'b', 'c'];
       const weights = cfg.enumWeights;
       if (weights && weights.length === vals.length) {
-        const total = weights.reduce((s, w) => s + w, 0);
-        let r = rng() * total;
-        for (let i = 0; i < vals.length; i++) {
-          r -= weights[i];
-          if (r <= 0) return vals[i];
-        }
-        return vals[vals.length - 1];
+        return weightedPick(vals, weights, rng);
       }
       return vals[Math.floor(rng() * vals.length)];
     }

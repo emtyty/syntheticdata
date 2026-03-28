@@ -18,6 +18,12 @@ export interface GeneratorConfig {
   nullRate?: number;
   fakerFn?: string;
   locale?: string;
+  // Advanced FK controls (Phase 3)
+  fkNullRate?: number;
+  fkDistribution?: 'uniform' | 'weighted' | 'fixed_per_parent';
+  fkChildrenPerParent?: { min: number; max: number };
+  fkValueWeights?: Array<{ value: string; weight: number }>;
+  fkFixedValues?: string[];
 }
 
 export interface ColumnSchema {
@@ -74,13 +80,13 @@ export interface TableRowConfig {
   rowCount: number;
 }
 
-export type JobStatus = 'pending' | 'running' | 'done' | 'error';
+export type JobStatus = 'pending' | 'running' | 'done' | 'error' | 'cancelled' | 'expired';
 export type GeneratedRow = Record<string, string | number | boolean | null>;
 
 export interface GenerationJob {
-  id: string; schemaId: string; rowCount: number;
+  id: string; schemaId?: string; rowCount?: number;
   status: JobStatus; progress: number; seed: number;
-  result?: GeneratedRow[];
+  completedRows?: number;
   errorMessage?: string;
   createdAt: string;
 }
@@ -89,4 +95,4 @@ export interface GenerationJob {
 export type AppStep = 'import' | 'schema' | 'generate' | 'preview';
 
 // Project editor tabs
-export type ProjectTab = 'tables' | 'diagram' | 'generate' | 'export';
+export type ProjectTab = 'tables' | 'diagram' | 'generate' | 'export' | 'query';
