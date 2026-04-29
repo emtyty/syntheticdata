@@ -105,6 +105,15 @@ export async function deleteProject(id: string): Promise<void> {
   await api.delete(`/projects/${id}`);
 }
 
+export async function duplicateProject(id: string): Promise<Project> {
+  const { data } = await api.post<{ ok: true; data: Project }>(`/projects/${id}/duplicate`);
+  return data.data;
+}
+
+export async function renameProject(id: string, name: string, tables: DatasetSchema[]): Promise<Project> {
+  return updateProject(id, name, tables);
+}
+
 export async function inferFromPrisma(source: string, name?: string): Promise<Project> {
   const { data } = await api.post<{ ok: true; data: Project }>('/projects/infer/prisma', { source, name });
   return data.data;
@@ -148,6 +157,17 @@ export async function queryProjectData(
     `/query/project/${jobId}`,
     { sql },
   );
+  return data.data;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+export async function getStats(): Promise<{
+  totalJobsCompleted: number;
+  totalRowsGenerated: number;
+  lastActivity: string | null;
+}> {
+  const { data } = await api.get<{ ok: true; data: { totalJobsCompleted: number; totalRowsGenerated: number; lastActivity: string | null } }>('/stats');
   return data.data;
 }
 

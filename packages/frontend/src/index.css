@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 @layer base {
+  /* DARK theme (default) — Neon Architect */
   :root {
-    /* Neon Architect palette mapped to shadcn CSS variable slots */
+    /* Legacy shadcn slots (HSL triples) */
     --background: 214 33% 6%;       /* #0a0e14 */
     --foreground: 227 57% 96%;      /* #f1f3fc */
     --card: 214 22% 11%;            /* #151a21 */
@@ -22,7 +23,86 @@
     --destructive: 350 100% 72%;    /* #ff6e84 */
     --destructive-foreground: 0 0% 0%;
     --radius: 0.25rem;
+
+    /* Neon Architect (RGB triples for alpha support) */
+    --studio-blue: 46 91 255;        /* #2E5BFF */
+    --surface: 10 14 20;             /* #0a0e14 */
+    --surface-container: 21 26 33;   /* #151a21 */
+    --surface-container-high: 27 32 40;       /* #1b2028 */
+    --surface-container-highest: 32 38 47;    /* #20262f */
+    --surface-container-low: 15 20 26;        /* #0f141a */
+    --surface-container-lowest: 0 0 0;        /* #000000 */
+    --surface-bright: 38 44 54;      /* #262c36 */
+    --surface-variant: 32 38 47;     /* #20262f */
+    --on-surface: 241 243 252;       /* #f1f3fc */
+    --on-surface-variant: 168 171 179;        /* #a8abb3 */
+    --on-primary-fixed: 0 0 0;       /* #000000 */
+    --outline-variant: 68 72 79;     /* #44484f */
+    --tertiary: 153 247 255;         /* #99f7ff */
+    --tertiary-dim: 0 226 238;       /* #00e2ee */
+    --primary-fixed-dim: 83 145 255; /* #5391ff */
+    --error: 255 110 132;            /* #ff6e84 */
+    --error-container: 167 1 56;     /* #a70138 */
+
+    /* Scrollbar */
+    --scrollbar-track: #0a0e14;
+    --scrollbar-thumb: #44484f;
   }
+
+  /* LIGHT theme overrides */
+  :root.light {
+    /* Legacy shadcn slots */
+    --background: 220 20% 97%;      /* #f5f7fa */
+    --foreground: 220 18% 13%;      /* #1a1f28 */
+    --card: 0 0% 100%;              /* #ffffff */
+    --card-foreground: 220 18% 13%;
+    --border: 220 13% 80%;          /* #c4c8d0 */
+    --input: 0 0% 100%;
+    --primary: 224 88% 55%;         /* #2e5bff (deeper for contrast) */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 92%;
+    --secondary-foreground: 220 18% 13%;
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 35%;
+    --accent: 220 14% 88%;
+    --accent-foreground: 220 18% 13%;
+    --destructive: 0 75% 42%;       /* #ba1a1a */
+    --destructive-foreground: 0 0% 100%;
+
+    /* Neon Architect — light variants */
+    --studio-blue: 30 75 230;        /* #1e4be6 */
+    --surface: 245 247 250;          /* #f5f7fa */
+    --surface-container: 255 255 255;         /* #ffffff cards */
+    --surface-container-high: 248 249 251;    /* #f8f9fb */
+    --surface-container-highest: 236 239 244; /* #eceff4 */
+    --surface-container-low: 250 251 252;     /* #fafbfc */
+    --surface-container-lowest: 255 255 255;  /* #ffffff */
+    --surface-bright: 255 255 255;   /* #ffffff hover */
+    --surface-variant: 231 234 240;  /* #e7eaf0 */
+    --on-surface: 26 31 40;          /* #1a1f28 dark text */
+    --on-surface-variant: 74 79 87;  /* #4a4f57 */
+    --on-primary-fixed: 255 255 255; /* white text on primary */
+    --outline-variant: 196 200 208;  /* #c4c8d0 */
+    --tertiary: 0 104 121;           /* #006879 deeper cyan */
+    --tertiary-dim: 0 88 106;        /* #00586a */
+    --primary-fixed-dim: 30 75 230;  /* #1e4be6 */
+    --error: 186 26 26;              /* #ba1a1a */
+    --error-container: 255 218 214;  /* #ffdad6 */
+
+    --scrollbar-track: #eceff4;
+    --scrollbar-thumb: #c4c8d0;
+  }
+
+  /* Bump base font for better readability (was 16px default) */
+  html { font-size: 17px; }
+}
+
+@layer utilities {
+  /* Scale up the small fixed-pixel font sizes used across the UI */
+  .text-\[9px\]  { font-size: 11px; line-height: 14px; }
+  .text-\[10px\] { font-size: 12px; line-height: 16px; }
+  .text-\[11px\] { font-size: 13px; line-height: 17px; }
+  .text-\[12px\] { font-size: 14px; line-height: 18px; }
 }
 
 * {
@@ -45,6 +125,6 @@ body {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0a0e14; }
-::-webkit-scrollbar-thumb { background: #44484f; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #85adff44; }

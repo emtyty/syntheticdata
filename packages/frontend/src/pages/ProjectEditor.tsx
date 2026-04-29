@@ -157,7 +157,7 @@ export function ProjectEditor() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#0a0e14] text-on-surface-variant gap-3 font-label text-[11px] uppercase tracking-widest">
+      <div className="flex items-center justify-center h-screen bg-surface text-on-surface-variant gap-3 font-label text-[11px] uppercase tracking-widest">
         <Loader2 className="w-5 h-5 animate-spin text-primary" />
         Loading project…
       </div>
@@ -166,7 +166,7 @@ export function ProjectEditor() {
 
   if (loadError || !project) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-[#0a0e14] gap-4">
+      <div className="flex flex-col items-center justify-center h-screen bg-surface gap-4">
         <p className="text-error text-sm font-label">{loadError ?? 'Project not found'}</p>
         <Link to="/" className="text-[11px] font-label uppercase tracking-widest text-primary hover:underline">
           ← Back to Projects
@@ -178,9 +178,9 @@ export function ProjectEditor() {
   // ── Main layout ────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-[#0a0e14]">
+    <div className="flex flex-col h-screen overflow-hidden bg-surface">
       {/* Header */}
-      <header className="shrink-0 flex items-center gap-3 px-4 h-14 border-b border-[#151a21] bg-[#0a0e14]/95 backdrop-blur-md">
+      <header className="shrink-0 flex items-center gap-3 px-4 h-14 border-b border-surface-container bg-surface/95 backdrop-blur-md">
         <Link
           to="/"
           className="flex items-center gap-1.5 text-xs font-label uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors"
@@ -189,7 +189,7 @@ export function ProjectEditor() {
           Projects
         </Link>
 
-        <span className="text-[#44484f]">|</span>
+        <span className="text-outline-variant">|</span>
 
         {/* Editable project name */}
         <input
@@ -212,8 +212,8 @@ export function ProjectEditor() {
               to={`/projects/${projectId}/${t.id}`}
               className={`px-3 py-1.5 font-label text-[10px] uppercase tracking-widest rounded transition-colors ${
                 activeTab === t.id
-                  ? 'bg-[#151a21] text-[#2E5BFF] border-b-2 border-[#2E5BFF] font-bold'
-                  : 'text-on-surface-variant hover:text-on-surface hover:bg-[#1b2028]'
+                  ? 'bg-surface-container text-studio-blue border-b-2 border-studio-blue font-bold'
+                  : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high'
               }`}
             >
               {t.label}

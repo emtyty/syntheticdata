@@ -3,6 +3,7 @@ import { ProjectList } from './pages/ProjectList.js';
 import { ProjectEditor } from './pages/ProjectEditor.js';
 import { Dashboard } from './pages/Dashboard.js';
 import { Profile } from './pages/Profile.js';
+import { SingleTablePage } from './pages/SingleTablePage.js';
 
 export default function App() {
   return (
@@ -10,6 +11,7 @@ export default function App() {
       <Route path="/" element={<ProjectList />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/single" element={<SingleTablePage />} />
       {/* Redirect bare project URL to the default tab */}
       <Route path="/projects/:projectId" element={<Navigate to="tables" replace />} />
       <Route path="/projects/:projectId/:tab" element={<ProjectEditor />} />

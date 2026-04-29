@@ -133,6 +133,23 @@ export async function projectRoutes(app: FastifyInstance) {
     reply.send({ ok: true });
   });
 
+  // Duplicate project — creates a copy with new IDs
+  app.post<{ Params: { id: string } }>('/projects/:id/duplicate', async (req, reply) => {
+    const original = getProject(req.params.id, reply);
+    if (!original) return;
+    const now = new Date().toISOString();
+    const copy: Project = {
+      ...original,
+      id: nanoid(),
+      name: `${original.name} (copy)`,
+      tables: original.tables.map(t => ({ ...t, id: nanoid() })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    projectStore.set(copy);
+    reply.code(201).send({ ok: true, data: copy });
+  });
+
   // ── Import: Prisma schema ──────────────────────────────────────────────────
 
   app.post('/projects/infer/prisma', async (req, reply) => {

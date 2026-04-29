@@ -1,16 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '../components/layout/Sidebar.js';
-import { listProjects } from '../api/client.js';
+import { listProjects, getStats } from '../api/client.js';
 import type { Project } from '../types/index.js';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [uptime, setUptime] = useState('000:00:00');
+  const [totalRowsGenerated, setTotalRowsGenerated] = useState<number | null>(null);
+  const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
 
   useEffect(() => {
     listProjects().then(setProjects).catch(() => {});
+    getStats().then(s => {
+      setTotalRowsGenerated(s.totalRowsGenerated);
+      setTotalJobsCompleted(s.totalJobsCompleted);
+    }).catch(() => {});
   }, []);
 
   // Mock uptime counter
@@ -30,12 +36,12 @@ export function Dashboard() {
   const totalTables = projects.reduce((s, p) => s + p.tables.length, 0);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#0a0e14]">
+    <div className="flex h-screen overflow-hidden bg-surface">
       <Sidebar />
 
       <main className="flex-1 ml-64 flex flex-col min-h-screen overflow-hidden">
         {/* Top Nav */}
-        <header className="flex items-center justify-between px-8 w-full h-16 sticky top-0 z-50 bg-[#0a0e14]/80 backdrop-blur-md border-b border-[#151a21] shrink-0">
+        <header className="flex items-center justify-between px-8 w-full h-16 sticky top-0 z-50 bg-surface/80 backdrop-blur-md border-b border-surface-container shrink-0">
           <div className="flex items-center flex-1 max-w-xl">
             <div className="relative w-full">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
@@ -47,13 +53,13 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-8">
-            <button className="p-2 text-slate-400 hover:text-white hover:bg-[#262c36] rounded-md transition-all">
+            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <button className="p-2 text-slate-400 hover:text-white hover:bg-[#262c36] rounded-md transition-all">
+            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
               <span className="material-symbols-outlined">help_outline</span>
             </button>
-            <div className="h-6 w-px bg-[#44484f]/20 mx-2" />
+            <div className="h-6 w-px bg-outline-variant/20 mx-2" />
             <div className="text-right hidden md:block">
               <p className="text-[10px] font-label text-tertiary uppercase tracking-tighter">System Status</p>
               <p className="text-[10px] font-label text-on-surface">NOMINAL</p>
@@ -72,7 +78,7 @@ export function Dashboard() {
                 <span className="text-tertiary">{projects.length} project{projects.length !== 1 ? 's' : ''}</span> loaded across all clusters.
               </p>
             </div>
-            <div className="px-6 py-3 bg-surface-container rounded-lg border border-[#44484f]/10">
+            <div className="px-6 py-3 bg-surface-container rounded-lg border border-outline-variant/10">
               <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Uptime</p>
               <p className="text-xl font-bold font-headline font-label">{uptime}</p>
             </div>
@@ -80,7 +86,7 @@ export function Dashboard() {
 
           {/* Metric Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-surface-container p-6 rounded-xl border border-[#44484f]/10 relative overflow-hidden group">
+            <div className="bg-surface-container p-6 rounded-xl border border-outline-variant/10 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <span className="material-symbols-outlined text-6xl">database</span>
               </div>
@@ -94,7 +100,7 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-surface-container p-6 rounded-xl border border-[#44484f]/10 relative overflow-hidden group">
+            <div className="bg-surface-container p-6 rounded-xl border border-outline-variant/10 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                 <span className="material-symbols-outlined text-6xl">account_tree</span>
               </div>
@@ -105,15 +111,24 @@ export function Dashboard() {
               </div>
             </div>
 
-            <div className="bg-surface-container p-6 rounded-xl border border-[#44484f]/10 relative overflow-hidden group">
+            <div className="bg-surface-container p-6 rounded-xl border border-outline-variant/10 relative overflow-hidden group">
               <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <span className="material-symbols-outlined text-6xl">memory</span>
+                <span className="material-symbols-outlined text-6xl">data_table</span>
               </div>
-              <p className="text-xs font-label text-primary uppercase tracking-widest mb-2">Engine Status</p>
-              <h3 className="text-4xl font-bold font-headline">v2.4</h3>
-              <div className="mt-4 flex items-center gap-2 text-[10px] font-label text-tertiary">
-                <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-                <span>ALL NODES OPERATIONAL</span>
+              <p className="text-xs font-label text-primary uppercase tracking-widest mb-2">Rows Generated</p>
+              <div className="flex items-baseline gap-2">
+                <h3 className="text-4xl font-bold font-headline">
+                  {totalRowsGenerated === null
+                    ? '—'
+                    : totalRowsGenerated >= 1_000_000
+                      ? `${(totalRowsGenerated / 1_000_000).toFixed(1)}M`
+                      : totalRowsGenerated >= 1_000
+                        ? `${(totalRowsGenerated / 1_000).toFixed(1)}K`
+                        : totalRowsGenerated.toString()}
+                </h3>
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-[10px] font-label text-on-surface-variant">
+                <span>{totalJobsCompleted ?? 0} COMPLETED JOB{totalJobsCompleted !== 1 ? 'S' : ''}</span>
               </div>
             </div>
           </div>
@@ -138,26 +153,33 @@ export function Dashboard() {
               </button>
             </div>
 
-            <div className="bg-surface-container rounded-xl border border-[#44484f]/10 overflow-hidden">
-              <div className="grid grid-cols-12 px-6 py-4 bg-surface-container-high border-b border-[#44484f]/10 font-label text-[10px] tracking-widest uppercase text-on-surface-variant">
+            <div className="bg-surface-container rounded-xl border border-outline-variant/10 overflow-hidden">
+              <div className="grid grid-cols-12 px-6 py-4 bg-surface-container-high border-b border-outline-variant/10 font-label text-[10px] tracking-widest uppercase text-on-surface-variant">
                 <div className="col-span-5">Project Name</div>
                 <div className="col-span-3 text-center">Tables</div>
                 <div className="col-span-4 text-right">Last Updated</div>
               </div>
 
               {projects.length === 0 ? (
-                <div className="px-6 py-12 text-center text-on-surface-variant text-sm font-label">
-                  NO PROJECTS YET — CREATE ONE FROM THE PROJECTS PAGE
+                <div className="px-6 py-12 text-center">
+                  <span className="material-symbols-outlined text-[36px] text-on-surface-variant/30 block mb-3">folder_open</span>
+                  <p className="text-on-surface-variant text-sm font-label uppercase tracking-widest mb-4">No projects yet</p>
+                  <button
+                    onClick={() => navigate('/')}
+                    className="px-5 py-2.5 bg-primary text-on-primary-fixed font-headline font-bold text-xs uppercase tracking-widest rounded-md hover:brightness-110 transition-all"
+                  >
+                    Create First Project
+                  </button>
                 </div>
               ) : (
                 projects.slice(0, 6).map((project, i) => (
                   <div
                     key={project.id}
                     onClick={() => navigate(`/projects/${project.id}/tables`)}
-                    className={`grid grid-cols-12 px-6 py-5 hover:bg-[#262c36]/30 transition-colors cursor-pointer items-center ${i < projects.slice(0, 6).length - 1 ? 'border-b border-[#44484f]/5' : ''}`}
+                    className={`grid grid-cols-12 px-6 py-5 hover:bg-surface-bright/30 transition-colors cursor-pointer items-center ${i < projects.slice(0, 6).length - 1 ? 'border-b border-outline-variant/5' : ''}`}
                   >
                     <div className="col-span-5 flex items-center gap-4">
-                      <div className="w-2 h-2 rounded-full bg-[#85adff]" />
+                      <div className="w-2 h-2 rounded-full bg-primary" />
                       <div>
                         <div className="font-bold text-sm">{project.name}</div>
                         <div className="text-[10px] text-on-surface-variant font-label mt-1">
@@ -181,7 +203,7 @@ export function Dashboard() {
         </section>
 
         {/* Footer */}
-        <footer className="shrink-0 p-6 border-t border-[#151a21] flex justify-between items-center text-[10px] font-label tracking-widest text-on-surface-variant">
+        <footer className="shrink-0 p-6 border-t border-surface-container flex justify-between items-center text-[10px] font-label tracking-widest text-on-surface-variant">
           <div className="flex gap-6">
             <span className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-tertiary" />

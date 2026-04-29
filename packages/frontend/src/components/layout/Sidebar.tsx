@@ -7,6 +7,7 @@ interface SidebarProps {
 const NAV_ITEMS = [
   { href: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
   { href: '/', icon: 'folder_open', label: 'Projects' },
+  { href: '/single', icon: 'table_chart', label: 'Single Table' },
   { href: '/profile', icon: 'settings', label: 'Settings' },
 ];
 
@@ -28,11 +29,11 @@ export function Sidebar({ onNewProject }: SidebarProps) {
   }
 
   return (
-    <aside className="flex flex-col h-screen w-64 border-r border-[#151a21] bg-[#0a0e14] py-6 fixed left-0 top-0 overflow-y-auto shrink-0 z-40">
+    <aside className="flex flex-col h-screen w-64 border-r border-surface-container bg-surface py-6 fixed left-0 top-0 overflow-y-auto shrink-0 z-40">
       {/* Logo */}
       <div className="px-6 mb-8">
-        <div className="text-xl font-bold tracking-tighter text-[#2E5BFF] font-headline">Synthetic Studio</div>
-        <div className="font-label text-[10px] uppercase tracking-widest text-slate-500 mt-1">Data Engine v2.4</div>
+        <div className="text-xl font-bold tracking-tighter text-studio-blue font-headline">Synthetic Studio</div>
+        <div className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant mt-1">Data Engine v2.4</div>
       </div>
 
       {/* Nav */}
@@ -43,8 +44,8 @@ export function Sidebar({ onNewProject }: SidebarProps) {
             to={item.href}
             className={
               isActive(item.href)
-                ? 'flex items-center gap-3 px-4 py-3 bg-[#151a21] text-[#2E5BFF] border-l-2 border-[#2E5BFF] font-bold transition-all'
-                : 'flex items-center gap-3 px-4 py-3 text-slate-400 font-medium hover:text-slate-100 hover:bg-[#262c36] rounded-md transition-colors duration-200'
+                ? 'flex items-center gap-3 px-4 py-3 bg-surface-container text-studio-blue border-l-2 border-studio-blue font-bold transition-all'
+                : 'flex items-center gap-3 px-4 py-3 text-on-surface-variant font-medium hover:text-on-surface hover:bg-surface-bright rounded-md transition-colors duration-200'
             }
           >
             <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
@@ -62,8 +63,8 @@ export function Sidebar({ onNewProject }: SidebarProps) {
           <span className="material-symbols-outlined text-[18px]">add_circle</span>
           New Project
         </button>
-        <div className="mt-6 flex items-center gap-3 p-2 bg-surface-container rounded-lg border border-[#44484f]/20">
-          <div className="w-8 h-8 rounded bg-[#20262f] flex items-center justify-center text-[11px] font-bold text-[#85adff] shrink-0">
+        <div className="mt-6 flex items-center gap-3 p-2 bg-surface-container rounded-lg border border-outline-variant/20">
+          <div className="w-8 h-8 rounded bg-surface-variant flex items-center justify-center text-[11px] font-bold text-primary shrink-0">
             SY
           </div>
           <div className="flex-1 min-w-0">
