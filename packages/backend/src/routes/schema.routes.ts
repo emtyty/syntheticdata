@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { schemaStore } from '../store/session.store.js';
 import { inferFromCsv } from '../services/inference.service.js';
 import { parseSQL } from '../services/sql-parser.service.js';
+import { sampleValue } from '../services/generator.service.js';
 import type { ColumnSchema, DatasetSchema } from '../types/index.js';
 
 const GeneratorConfigSchema = z.object({
@@ -172,5 +173,17 @@ export async function schemaRoutes(app: FastifyInstance) {
       }
     }
     return { ok: true, data: pools };
+  });
+
+  // POST /sample — preview a single value for one column config
+  app.post<{ Body: { column: ColumnSchema; seed?: number } }>('/sample', async (req, reply) => {
+    const { column, seed } = req.body ?? {};
+    if (!column?.dataType) return reply.code(400).send({ ok: false, error: 'column required' });
+    try {
+      const value = sampleValue(column, seed);
+      return { ok: true, data: { value } };
+    } catch (e) {
+      return reply.code(400).send({ ok: false, error: (e as Error).message });
+    }
   });
 }

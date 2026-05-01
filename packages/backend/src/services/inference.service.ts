@@ -10,6 +10,7 @@
 
 import Papa from 'papaparse';
 import type { ColumnDataType, ColumnSchema, GeneratorConfig, InferredSchema } from '../types/index.js';
+import { applyRealisticDefaults } from './realistic-defaults.service.js';
 
 // ─── Regex helpers ────────────────────────────────────────────────────────────
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -107,7 +108,12 @@ export function inferFromCsv(buffer: Buffer): InferredSchema {
     const nullRate = nullCount / samples.length;
     const nonNullSamples = samples.filter(v => v !== '' && v !== 'null' && v !== 'NULL');
 
-    const { type, config } = detectType(nonNullSamples);
+    const detected = detectType(nonNullSamples);
+    // Apply realistic weighted defaults based on column NAME (e.g. "country"
+    // → weighted enum, "age" → adult range). User can override in editor.
+    const enriched = applyRealisticDefaults(header, detected.type, detected.config);
+    const type = enriched?.dataType ?? detected.type;
+    const config = enriched?.config ?? detected.config;
 
     const isLikelyPk = (
       header.toLowerCase() === 'id' ||

@@ -7,6 +7,7 @@
 import NodeSqlParser from 'node-sql-parser';
 const { Parser } = NodeSqlParser;
 import type { ColumnDataType, ColumnSchema, GeneratorConfig, IndexType } from '../types/index.js';
+import { applyRealisticDefaults } from './realistic-defaults.service.js';
 
 const parser = new Parser();
 
@@ -106,9 +107,15 @@ function extractColumnsFromAst(ast: any): Omit<ColumnSchema, 'id'>[] {
     if (isPk)          indexType = 'primary_key';
     else if (fkRef)    indexType = 'foreign_key';
     else if (isUnique) indexType = 'unique';
-    const config = defaultConfig(dataType);
+    let config = defaultConfig(dataType);
+    let finalType = dataType;
     if (fkRef) config.poolRef = fkRef;
-    results.push({ name, dataType, indexType, notNull, generatorConfig: config });
+    // Apply weighted realism defaults by column name (skip FKs — they pool)
+    if (!fkRef) {
+      const enriched = applyRealisticDefaults(name, dataType, config);
+      if (enriched) { finalType = enriched.dataType; config = enriched.config; }
+    }
+    results.push({ name, dataType: finalType, indexType, notNull, generatorConfig: config });
   }
   return results;
 }
@@ -198,9 +205,14 @@ function extractColumnsFromBody(body: string): Omit<ColumnSchema, 'id'>[] {
     else if (fkRef)    indexType = 'foreign_key';
     else if (isUnique) indexType = 'unique';
 
-    const config = defaultConfig(dataType);
+    let config = defaultConfig(dataType);
+    let finalType = dataType;
     if (fkRef) config.poolRef = fkRef;
-    results.push({ name, dataType, indexType, notNull, generatorConfig: config });
+    if (!fkRef) {
+      const enriched = applyRealisticDefaults(name, dataType, config);
+      if (enriched) { finalType = enriched.dataType; config = enriched.config; }
+    }
+    results.push({ name, dataType: finalType, indexType, notNull, generatorConfig: config });
   }
   return results;
 }

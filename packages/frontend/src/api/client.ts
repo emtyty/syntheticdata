@@ -160,6 +160,32 @@ export async function queryProjectData(
   return data.data;
 }
 
+// ─── Live sample ──────────────────────────────────────────────────────────────
+
+export async function sampleColumnValue(column: ColumnSchema, seed?: number): Promise<string | number | boolean | null> {
+  const { data } = await api.post<{ ok: true; data: { value: string | number | boolean | null } }>('/sample', { column, seed });
+  return data.data.value;
+}
+
+// ─── Templates ────────────────────────────────────────────────────────────────
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  description: string;
+  tableCount: number;
+}
+
+export async function listTemplates(): Promise<TemplateSummary[]> {
+  const { data } = await api.get<{ ok: true; data: TemplateSummary[] }>('/templates');
+  return data.data;
+}
+
+export async function createFromTemplate(templateId: string, projectName: string): Promise<Project> {
+  const { data } = await api.post<{ ok: true; data: Project }>('/projects/from-template', { templateId, projectName });
+  return data.data;
+}
+
 // ─── Stats ────────────────────────────────────────────────────────────────────
 
 export async function getStats(): Promise<{

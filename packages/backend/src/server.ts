@@ -6,6 +6,7 @@ import { generateRoutes } from './routes/generate.routes.js';
 import { exportRoutes } from './routes/export.routes.js';
 import { projectRoutes } from './routes/project.routes.js';
 import { statsRoutes } from './routes/stats.routes.js';
+import { templateRoutes } from './routes/template.routes.js';
 
 const app = Fastify({ logger: { level: 'info' } });
 
@@ -17,6 +18,7 @@ await app.register(generateRoutes, { prefix: '/api/v1' });
 await app.register(exportRoutes, { prefix: '/api/v1' });
 await app.register(projectRoutes, { prefix: '/api/v1' });
 await app.register(statsRoutes, { prefix: '/api/v1' });
+await app.register(templateRoutes, { prefix: '/api/v1' });
 
 app.get('/health', async () => ({ ok: true, ts: new Date().toISOString() }));
 

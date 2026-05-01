@@ -378,12 +378,13 @@ export async function projectRoutes(app: FastifyInstance) {
 
   // ── SQL query against generated data ───────────────────────────────────────
 
-  // SQLite authorizer action codes (from sqlite3.h)
-  const SQLITE_READ      = 20; // reading a column value
-  const SQLITE_SELECT    = 21; // start of a SELECT
-  const SQLITE_FUNCTION  = 31; // use of a SQL function
-  const SQLITE_RECURSIVE = 33; // recursive CTE (WITH RECURSIVE SELECT …)
-  // All other actions (INSERT, UPDATE, DELETE, ATTACH, PRAGMA, CREATE, …) are denied.
+  // Statement-shape blocklist: tokens that must not appear at the top level
+  // of the user's SQL. Combined with `readonly: true` on the connection,
+  // this keeps the query feature read-only.
+  // (Note: better-sqlite3 doesn't expose SQLite's set_authorizer hook, so we
+  // enforce in user-space via the regex below.)
+  const FORBIDDEN_KEYWORDS_RE =
+    /\b(insert|update|delete|drop|create|alter|attach|detach|pragma|reindex|replace|vacuum|truncate)\b/i;
 
   app.post<{ Params: { jobId: string }; Body: { sql: string } }>(
     '/query/project/:jobId',
@@ -408,10 +409,16 @@ export async function projectRoutes(app: FastifyInstance) {
       const { sql } = req.body;
       if (!sql?.trim()) return reply.code(400).send({ ok: false, error: 'Missing sql' });
 
-      // Surface-level check: must start with SELECT or WITH (for CTEs).
-      // The authorizer below enforces this at the SQLite engine level too.
-      if (!/^\s*(select|with)\b/i.test(sql.trim())) {
+      // Must start with SELECT or WITH (for CTEs).
+      const trimmed = sql.trim();
+      if (!/^(select|with)\b/i.test(trimmed)) {
         return reply.code(400).send({ ok: false, error: 'Only SELECT queries are allowed' });
+      }
+      // Block any forbidden keyword anywhere in the statement (e.g. inside a
+      // subquery or after a semicolon). Combined with the readonly connection
+      // and the SELECT/WITH prefix check, this keeps queries strictly read-only.
+      if (FORBIDDEN_KEYWORDS_RE.test(trimmed)) {
+        return reply.code(400).send({ ok: false, error: 'Only read-only queries are allowed' });
       }
 
       // ── 4. Resolve the project's own SQLite export file ───────────────────
@@ -428,25 +435,10 @@ export async function projectRoutes(app: FastifyInstance) {
         await buildSqliteDb(project.tables, job.resultPaths, dbPath);
       }
 
-      // ── 5. Open read-only with engine-level authorizer ────────────────────
-      // `readonly: true` prevents any writes at the OS level.
-      // The authorizer is a SQLite-engine callback — it fires for every
-      // operation the query parser produces, before execution.  Nothing in
-      // the SQL text can circumvent it.
+      // ── 5. Open read-only ────────────────────────────────────────────────
+      // `readonly: true` blocks writes at the file level. The keyword blocklist
+      // above blocks ATTACH/PRAGMA/etc. before SQLite ever sees them.
       const db = new Database(dbPath, { readonly: true });
-
-      db.authorize((action: number) => {
-        if (
-          action === SQLITE_SELECT   ||  // SELECT statement
-          action === SQLITE_READ     ||  // read a column
-          action === SQLITE_FUNCTION ||  // built-in functions (COUNT, etc.)
-          action === SQLITE_RECURSIVE    // WITH RECURSIVE …
-        ) {
-          return 0; // SQLITE_OK — allow
-        }
-        // Deny ATTACH, PRAGMA, INSERT, UPDATE, DELETE, DROP, CREATE, …
-        return 1; // SQLITE_DENY
-      });
 
       try {
         const stmt = db.prepare(sql);

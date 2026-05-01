@@ -6,11 +6,13 @@ import { nanoid } from 'nanoid';
 import {
   listProjects, createProject, deleteProject, inferFromPrisma, inferProjectFromSql,
   inferFromCsv, duplicateProject, updateProject,
+  listTemplates, createFromTemplate,
 } from '../api/client.js';
+import type { TemplateSummary } from '../api/client.js';
 import type { Project } from '../types/index.js';
 import { Sidebar } from '../components/layout/Sidebar.js';
 
-type ModalMode = 'manual' | 'prisma' | 'sql' | 'csv' | null;
+type ModalMode = 'manual' | 'prisma' | 'sql' | 'csv' | 'template' | null;
 
 export function ProjectList() {
   const navigate = useNavigate();
@@ -130,7 +132,7 @@ export function ProjectList() {
               <h2 className="font-headline text-2xl font-bold">Quick Import</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-outline-variant/30 to-transparent" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {/* Prisma */}
               <button
                 onClick={() => setModalMode('prisma')}
@@ -195,6 +197,29 @@ export function ProjectList() {
                   </p>
                   <div className="flex items-center gap-2 text-tertiary font-label text-[11px] font-bold tracking-widest uppercase">
                     Upload File
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </div>
+                </div>
+              </button>
+
+              {/* From Template */}
+              <button
+                onClick={() => setModalMode('template')}
+                className="group relative p-8 bg-surface-container rounded-xl border border-outline-variant/10 hover:border-primary/40 transition-all duration-300 text-left overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                  <span className="material-symbols-outlined text-[100px]">auto_awesome</span>
+                </div>
+                <div className="relative z-10">
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-5 border border-outline-variant/20">
+                    <span className="material-symbols-outlined text-primary">auto_awesome</span>
+                  </div>
+                  <h3 className="text-xl font-headline font-bold mb-2">From Template</h3>
+                  <p className="text-on-surface-variant text-sm mb-5 max-w-[280px]">
+                    Pre-built multi-table bundles for e-commerce, SaaS, and healthcare with FK relations.
+                  </p>
+                  <div className="flex items-center gap-2 text-primary font-label text-[11px] font-bold tracking-widest uppercase">
+                    Choose Template
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </div>
                 </div>
@@ -276,9 +301,15 @@ export function ProjectList() {
         </div>
       </main>
 
-      {modalMode && (
+      {modalMode && modalMode !== 'template' && (
         <ImportModal
           mode={modalMode}
+          onClose={() => setModalMode(null)}
+          onCreated={handleCreated}
+        />
+      )}
+      {modalMode === 'template' && (
+        <TemplateModal
           onClose={() => setModalMode(null)}
           onCreated={handleCreated}
         />
@@ -612,6 +643,132 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
             {mode === 'manual' ? 'Create Project' : 'Parse & Create'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Template Modal ───────────────────────────────────────────────────────────
+
+interface TemplateModalProps {
+  onClose: () => void;
+  onCreated: (project: Project) => void;
+}
+
+function TemplateModal({ onClose, onCreated }: TemplateModalProps) {
+  const [templates, setTemplates] = useState<TemplateSummary[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listTemplates().then(setTemplates).catch((e: Error) => setError(e.message));
+  }, []);
+
+  // Default project name to template name when one is picked
+  useEffect(() => {
+    if (selectedId && !projectName.trim()) {
+      const tpl = templates.find(t => t.id === selectedId);
+      if (tpl) setProjectName(tpl.name.toLowerCase().replace(/\s+/g, '_'));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  async function handleSubmit() {
+    if (!selectedId || !projectName.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const project = await createFromTemplate(selectedId, projectName.trim());
+      onCreated(project);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-surface-container border border-outline-variant/30 rounded-xl w-full max-w-2xl shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/20">
+          <div>
+            <h2 className="font-headline font-bold">Create from Template</h2>
+            <p className="text-[10px] font-label uppercase tracking-widest text-on-surface-variant mt-0.5">
+              Pick a domain bundle to seed a multi-table project
+            </p>
+          </div>
+          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface transition-colors p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {error && (
+            <div className="bg-error/10 border border-error/30 rounded-lg px-3 py-2 text-sm text-error font-label">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {templates.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSelectedId(t.id)}
+                className={`w-full text-left p-4 rounded-lg border transition-all ${
+                  selectedId === t.id
+                    ? 'border-primary bg-primary/5'
+                    : 'border-outline-variant/20 hover:border-primary/40 bg-surface-container-low'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-headline font-bold">{t.name}</h3>
+                  <span className="px-2 py-0.5 bg-surface-variant rounded text-[10px] font-label text-on-surface">
+                    {t.tableCount} tables
+                  </span>
+                </div>
+                <p className="text-sm text-on-surface-variant">{t.description}</p>
+              </button>
+            ))}
+            {templates.length === 0 && !error && (
+              <div className="text-center py-8 text-on-surface-variant text-sm">Loading templates…</div>
+            )}
+          </div>
+
+          {selectedId && (
+            <div>
+              <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
+                Project Name
+              </label>
+              <input
+                className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary text-on-surface placeholder:text-on-surface-variant/50"
+                placeholder="e.g. demo_ecommerce"
+                value={projectName}
+                onChange={e => setProjectName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                autoFocus
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant/20">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-lg transition-colors font-label uppercase tracking-widest text-[11px]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!selectedId || !projectName.trim() || loading}
+            className="flex items-center gap-2 bg-primary text-on-primary-fixed px-5 py-2.5 rounded-lg text-sm font-bold hover:brightness-110 disabled:opacity-50 transition-all font-headline"
+          >
+            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Create Project
           </button>
         </div>
       </div>

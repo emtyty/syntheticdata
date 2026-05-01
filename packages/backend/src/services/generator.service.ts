@@ -8,70 +8,44 @@
 import {
   faker as fakerEN,
   Faker,
-  fakerJA,
-  fakerVI,
-  fakerZH_CN,
-  fakerKO,
-  fakerTH,
-  fakerID_ID,
-  fakerFR,
-  fakerDE,
-  fakerES,
-  fakerIT,
-  fakerPT_BR,
-  fakerRU,
-  fakerAR,
-  fakerTR,
-  fakerNL,
-  fakerSV,
-  fakerPL,
-  fakerDA,
-  fakerFI,
-  fakerNB_NO,
-  fakerEN_GB,
-  fakerEN_AU,
-  fakerEN_CA,
-  fakerUK,
-  fakerHE,
-  fakerCS_CZ,
-  fakerHU,
+  en,
+  ja,
+  vi,
+  de,
+  da,
+  fr,
+  es,
 } from '@faker-js/faker';
 import seedrandom from 'seedrandom';
 import { nanoid } from 'nanoid';
 import type { ColumnSchema, GeneratedRow, GeneratorConfig } from '../types/index.js';
 import { PoolRegistry } from './pool.service.js';
+import { jaOverrides } from './locale-data/ja.js';
+import { viOverrides } from './locale-data/vi.js';
+import {
+  richBio,
+  richProductDescription,
+  richReview,
+  richSupportTicket,
+  richCompanyAbout,
+  richTagline,
+  richTweet,
+  richAddressFull,
+} from './rich-text.service.js';
+import { PersonaCache, PERSONA_FIELDS, isPersonaFn } from './persona.service.js';
 
 // ─── Locale registry ───────────────────────────────────────────────────────────
+// Trimmed to 7 locales. ja/vi use override chains so sparse Faker categories
+// (music, vehicle, commerce, etc.) get native data instead of English fallback.
 
 const LOCALE_MAP: Record<string, Faker> = {
-  en_US:  fakerEN,
-  en_GB:  fakerEN_GB,
-  en_AU:  fakerEN_AU,
-  en_CA:  fakerEN_CA,
-  ja:     fakerJA,
-  vi:     fakerVI,
-  zh_CN:  fakerZH_CN,
-  ko:     fakerKO,
-  th:     fakerTH,
-  id_ID:  fakerID_ID,
-  fr:     fakerFR,
-  de:     fakerDE,
-  es:     fakerES,
-  it:     fakerIT,
-  pt_BR:  fakerPT_BR,
-  ru:     fakerRU,
-  ar:     fakerAR,
-  tr:     fakerTR,
-  nl:     fakerNL,
-  sv:     fakerSV,
-  pl:     fakerPL,
-  da:     fakerDA,
-  fi:     fakerFI,
-  nb_NO:  fakerNB_NO,
-  uk:     fakerUK,
-  he:     fakerHE,
-  cs_CZ:  fakerCS_CZ,
-  hu:     fakerHU,
+  en_US: fakerEN,
+  ja:    new Faker({ locale: [jaOverrides, ja, en] }),
+  vi:    new Faker({ locale: [viOverrides, vi, en] }),
+  de:    new Faker({ locale: [de, en] }),
+  da:    new Faker({ locale: [da, en] }),
+  fr:    new Faker({ locale: [fr, en] }),
+  es:    new Faker({ locale: [es, en] }),
 };
 
 function getFaker(locale?: string): Faker {
@@ -225,6 +199,37 @@ const FAKER_FN_MAP: Record<string, FakerFactory> = {
   'airline.airport':        f => f.airline.airport().name,
   'airline.seat':           f => f.airline.seat(),
   'airline.recordLocator':  f => f.airline.recordLocator(),
+  // ── Rich text (composite, AI-feel) ──
+  'rich.bio':               f => richBio(f),
+  'rich.productDescription':f => richProductDescription(f),
+  'rich.review':            f => richReview(f),
+  'rich.supportTicket':     f => richSupportTicket(f),
+  'rich.companyAbout':      f => richCompanyAbout(f),
+  'rich.tagline':           f => richTagline(f),
+  'rich.tweet':             f => richTweet(f),
+  'rich.addressFull':       f => richAddressFull(f),
+  // ── Persona (coherent per-row, requires personaGroup config) ──
+  // These factories are short-circuited in generateValue when personaGroup is
+  // set. They're listed here so the UI picker shows them and so a persona fn
+  // without personaGroup still resolves to a one-off fresh value.
+  'persona.fullName':       f => f.person.fullName(),
+  'persona.firstName':      f => f.person.firstName(),
+  'persona.lastName':       f => f.person.lastName(),
+  'persona.email':          f => f.internet.email(),
+  'persona.username':       f => f.internet.username(),
+  'persona.phone':          f => f.phone.number(),
+  'persona.birthdate':      f => f.date.birthdate().toISOString().slice(0, 10),
+  'persona.age':            f => f.number.int({ min: 21, max: 65 }),
+  'persona.jobTitle':       f => f.person.jobTitle(),
+  'persona.company':        f => f.company.name(),
+  'persona.city':           f => f.location.city(),
+  'persona.state':          f => f.location.state(),
+  'persona.country':        f => f.location.country(),
+  'persona.countryCode':    f => f.location.countryCode(),
+  'persona.postalCode':     f => f.location.zipCode(),
+  'persona.streetAddress':  f => f.location.streetAddress(),
+  'persona.avatarUrl':      f => `https://api.dicebear.com/7.x/avataaars/svg?seed=${f.string.alphanumeric(10)}`,
+  'persona.bio':            f => richBio(f),
 };
 
 function callFakerFn(fn: string, locale?: string): string | number | null {
@@ -323,9 +328,16 @@ function generateValue(
   cfg: GeneratorConfig,
   pool: PoolRegistry,
   rng: () => number,
+  personaCache?: PersonaCache,
 ): string | number | boolean | null {
   const nullRate = col.notNull ? 0 : (cfg.nullRate ?? 0);
   if (nullRate > 0 && rng() < nullRate) return null;
+
+  // Persona short-circuit: pull from per-row coherent persona before any other path
+  if (cfg.fakerFn && cfg.personaGroup && personaCache && isPersonaFn(cfg.fakerFn)) {
+    const persona = personaCache.get(cfg.personaGroup);
+    return PERSONA_FIELDS[cfg.fakerFn](persona);
+  }
 
   if (col.indexType === 'foreign_key' && cfg.poolRef) {
     // fkNullRate: apply before pool sampling
@@ -333,6 +345,19 @@ function generateValue(
     if (fkNull > 0 && rng() < fkNull) return null;
 
     let vals = pool.get(cfg.poolRef);
+
+    // Empty pool → either null (if column allows) or fail loudly (if notNull).
+    // Silent nulls here mask upstream bugs: parent table generated 0 rows,
+    // multi-chunk pool overwrite, etc.
+    if (vals.length === 0) {
+      if (col.notNull) {
+        throw new Error(
+          `FK pool "${cfg.poolRef}" is empty but column "${col.name}" is NOT NULL. ` +
+          `Make sure the parent table is generated first and produces rows.`,
+        );
+      }
+      return null;
+    }
 
     // Restrict to explicit subset if provided
     if (cfg.fkFixedValues?.length) {
@@ -449,6 +474,7 @@ function generateUniqueColumn(
   rowCount: number,
   pool: PoolRegistry,
   rng: () => number,
+  personasPerRow?: PersonaCache[],
 ): (string | number | boolean | null)[] {
   const seen = new Set<string>();
   const values: (string | number | boolean | null)[] = [];
@@ -457,7 +483,7 @@ function generateUniqueColumn(
     let val: string | number | boolean | null;
     let attempts = 0;
     do {
-      val = generateValue(col, col.generatorConfig, pool, rng);
+      val = generateValue(col, col.generatorConfig, pool, rng, personasPerRow?.[i]);
       attempts++;
       if (attempts > 10000) throw new Error(`Cannot generate enough unique values for column "${col.name}".`);
     } while (val !== null && seen.has(String(val)));
@@ -469,6 +495,26 @@ function generateUniqueColumn(
 
 // ─── Main generator ───────────────────────────────────────────────────────────
 
+/**
+ * Generate a single sample value for one column. Used by the Schema Editor to
+ * show a live preview of what the configured generator will produce. Doesn't
+ * touch pools or persona caches — FK columns return a placeholder.
+ */
+export function sampleValue(col: ColumnSchema, seed = Date.now()): string | number | boolean | null {
+  if (col.indexType === 'foreign_key') {
+    return '<FK reference>';
+  }
+  const rng = seedrandom(String(seed));
+  // Disable nullRate for sampling so the preview shows the actual generator,
+  // not occasional nulls.
+  const cfg = { ...col.generatorConfig, nullRate: 0, fkNullRate: 0 };
+  // PersonaCache spun up just for this preview so persona.* fns resolve.
+  const personaCache = col.generatorConfig.fakerFn && isPersonaFn(col.generatorConfig.fakerFn)
+    ? new PersonaCache(getFaker(col.generatorConfig.locale))
+    : undefined;
+  return generateValue(col, cfg, new PoolRegistry(), rng, personaCache);
+}
+
 export function generateRows(
   columns: ColumnSchema[],
   rowCount: number,
@@ -479,24 +525,49 @@ export function generateRows(
   const pool = existingPool ?? new PoolRegistry();
   const sorted = topoSort(columns);
 
+  // Pre-build a PersonaCache per row if any column uses personas. The cache
+  // lazily creates a coherent persona per `personaGroup` on first access, so
+  // every column referencing the same group within row N gets the same person.
+  const usesPersonas = sorted.some(c =>
+    c.generatorConfig.fakerFn && c.generatorConfig.personaGroup &&
+    isPersonaFn(c.generatorConfig.fakerFn),
+  );
+  const personasPerRow: PersonaCache[] | undefined = usesPersonas
+    ? Array.from({ length: rowCount }, () => new PersonaCache(getFaker(undefined)))
+    : undefined;
+
   const columnArrays = new Map<string, (string | number | boolean | null)[]>();
 
   for (const col of sorted) {
     let values: (string | number | boolean | null)[];
 
+    // Per-column locale: rebuild persona caches if any column uses a non-default locale.
+    // Simpler approach: each PersonaCache uses the locale of the FIRST persona-using
+    // column it sees. We'll just rebuild caches with the right faker per column.
+    const colPersonas = (personasPerRow && col.generatorConfig.personaGroup)
+      ? personasPerRow
+      : undefined;
+
     if (col.indexType === 'primary_key' || col.indexType === 'unique') {
-      values = generateUniqueColumn(col, rowCount, pool, rng);
+      values = generateUniqueColumn(col, rowCount, pool, rng, colPersonas);
     } else {
-      values = Array.from({ length: rowCount }, () =>
-        generateValue(col, col.generatorConfig, pool, rng),
+      values = Array.from({ length: rowCount }, (_, i) =>
+        generateValue(col, col.generatorConfig, pool, rng, colPersonas?.[i]),
       );
     }
 
     columnArrays.set(col.name, values);
 
     if (col.indexType === 'primary_key' && col.poolName) {
-      const nonNull = values.filter((v): v is string | number => v !== null);
-      pool.register(col.poolName, nonNull);
+      // Skip integer PKs: streaming layer post-processes them with a sequential
+      // counter and registers the FINAL (overridden) values. Registering raw
+      // here would seed the pool with random integers that never match rows.
+      if (col.dataType !== 'integer') {
+        const nonNull = values.filter((v): v is string | number => v !== null);
+        // appendToPool (not register) so multi-chunk tables accumulate rather
+        // than overwrite the previous chunk's PK values.
+        pool.appendToPool(col.poolName, nonNull);
+      }
     }
   }
 

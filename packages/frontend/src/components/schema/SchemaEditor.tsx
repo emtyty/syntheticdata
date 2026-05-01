@@ -1,16 +1,73 @@
-import { useState } from 'react';
-import { Plus, Trash2, ChevronRight, Settings2, ArrowRight, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Trash2, ChevronRight, Settings2, ArrowRight, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore.js';
 import { useProjectStore } from '../../store/projectStore.js';
 import type { ColumnSchema, DatasetSchema, IndexType } from '../../types/index.js';
 import { GeneratorPicker, getFakerMappingLabel, LOCALE_FLAG } from './GeneratorPicker.js';
 import { ConditionBuilder } from './ConditionBuilder.js';
 import { FkConfigModal } from './FkConfigModal.js';
-import { saveSchema, updateSchema } from '../../api/client.js';
+import { saveSchema, updateSchema, sampleColumnValue } from '../../api/client.js';
+
+// ─── Resizable columns ─────────────────────────────────────────────────────────
+
+const DEFAULT_WIDTHS = {
+  name:    220,
+  generator: 240,
+  index:    90,
+  pool:    180,
+  notNull:  72,
+  nullPct:  80,
+  sample:  420,
+} as const;
+
+type ColKey = keyof typeof DEFAULT_WIDTHS;
+
+function useColumnWidths() {
+  const [widths, setWidths] = useState<Record<ColKey, number>>({ ...DEFAULT_WIDTHS });
+  function startResize(key: ColKey, startX: number) {
+    const startWidth = widths[key];
+    function onMove(e: MouseEvent) {
+      const next = Math.max(60, Math.min(600, startWidth + (e.clientX - startX)));
+      setWidths(w => ({ ...w, [key]: next }));
+    }
+    function onUp() {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+    }
+    document.body.style.cursor = 'col-resize';
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+  return { widths, startResize };
+}
+
+interface ResizableThProps {
+  colKey: ColKey;
+  width: number;
+  startResize: (key: ColKey, startX: number) => void;
+  children: React.ReactNode;
+}
+
+function ResizableTh({ colKey, width, startResize, children }: ResizableThProps) {
+  return (
+    <th
+      style={{ width, minWidth: width, maxWidth: width }}
+      className="pb-2 pr-4 font-medium relative"
+    >
+      {children}
+      <span
+        onMouseDown={e => { e.preventDefault(); startResize(colKey, e.clientX); }}
+        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/40 transition-colors"
+      />
+    </th>
+  );
+}
 
 export function SchemaEditor() {
   const { schema, schemaServerSaved, updateColumn, addColumn, removeColumn, setSchema, setStep, addRule, removeRule } = useAppStore();
   const { project, tableRowCounts, setActiveTab } = useProjectStore();
+  const { widths, startResize } = useColumnWidths();
   // All tables from the project (for cross-table FK pool selection)
   const allProjectTables = project?.tables ?? [];
 
@@ -98,16 +155,16 @@ export function SchemaEditor() {
 
         {/* Table */}
         <div className="flex-1 overflow-auto p-6">
-          <table className="w-full text-sm border-collapse">
+          <table className="text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr className="text-left text-xs text-muted-foreground border-b border-border">
-                <th className="pb-2 pr-4 font-medium w-48">Column Name</th>
-                <th className="pb-2 pr-4 font-medium w-28">Generator</th>
-                <th className="pb-2 pr-4 font-medium w-20">Index</th>
-                <th className="pb-2 pr-4 font-medium w-40">Pool Ref</th>
-                <th className="pb-2 pr-4 font-medium w-16">Not Null</th>
-                <th className="pb-2 pr-4 font-medium w-20">Null %</th>
-                <th className="pb-2 font-medium text-xs">Sample Values</th>
+                <ResizableTh colKey="name"      width={widths.name}      startResize={startResize}>Column Name</ResizableTh>
+                <ResizableTh colKey="generator" width={widths.generator} startResize={startResize}>Generator</ResizableTh>
+                <ResizableTh colKey="index"     width={widths.index}     startResize={startResize}>Index</ResizableTh>
+                <ResizableTh colKey="pool"      width={widths.pool}      startResize={startResize}>Pool Ref</ResizableTh>
+                <ResizableTh colKey="notNull"   width={widths.notNull}   startResize={startResize}>Not Null</ResizableTh>
+                <ResizableTh colKey="nullPct"   width={widths.nullPct}   startResize={startResize}>Null %</ResizableTh>
+                <ResizableTh colKey="sample"    width={widths.sample}    startResize={startResize}>Sample Values</ResizableTh>
                 <th className="pb-2 w-8" />
               </tr>
             </thead>
@@ -116,6 +173,7 @@ export function SchemaEditor() {
                 <ColumnRow
                   key={col.id}
                   col={col}
+                  widths={widths}
                   thisTable={schema}
                   allProjectTables={allProjectTables}
                   onUpdate={updateColumn}
@@ -196,6 +254,7 @@ export function SchemaEditor() {
           current={pickerCol.dataType}
           currentFakerFn={pickerCol.generatorConfig.fakerFn}
           currentLocale={pickerCol.generatorConfig.locale}
+          currentPersonaGroup={pickerCol.generatorConfig.personaGroup}
           columnName={pickerCol.name}
           onSelect={(type, config) => {
             updateColumn({
@@ -239,6 +298,7 @@ export function SchemaEditor() {
 
 interface RowProps {
   col: ColumnSchema;
+  widths: Record<ColKey, number>;
   thisTable: DatasetSchema;
   allProjectTables: DatasetSchema[];
   onUpdate: (col: ColumnSchema) => void;
@@ -262,17 +322,43 @@ function buildPoolOptions(allTables: DatasetSchema[], currentTableId: string) {
   return options;
 }
 
-function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator, onOpenFkConfig, onRemove }: RowProps) {
+function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickGenerator, onOpenFkConfig, onRemove }: RowProps) {
   // All PK pools available across the project
   const poolOptions = buildPoolOptions(
     allProjectTables.length > 0 ? allProjectTables : [thisTable],
     thisTable.id,
   );
 
+  // ── Live sample value: re-fetch when the column config changes (debounced) ──
+  const [liveSample, setLiveSample] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable cache key — only re-sample when fields that affect generation change
+  const sampleKey = JSON.stringify({
+    dataType: col.dataType,
+    indexType: col.indexType,
+    cfg: col.generatorConfig,
+  });
+
+  function fetchSample(seed?: number) {
+    setRefreshing(true);
+    sampleColumnValue(col, seed)
+      .then(v => setLiveSample(v === null ? '' : String(v)))
+      .catch(() => setLiveSample(null))
+      .finally(() => setRefreshing(false));
+  }
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSample(), 250);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sampleKey]);
+
   return (
     <tr className="border-b border-border/50 hover:bg-card/50 group">
       {/* Name */}
-      <td className="py-2 pr-4">
+      <td className="py-2 pr-4" style={{ width: widths.name, maxWidth: widths.name }}>
         <input
           className="bg-transparent w-full focus:outline-none focus:border-b focus:border-primary text-sm font-mono"
           value={col.name}
@@ -280,33 +366,36 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
         />
       </td>
 
-      {/* Generator */}
-      <td className="py-2 pr-4">
+      {/* Generator (resizable column → label expands to fill) */}
+      <td className="py-2 pr-4" style={{ width: widths.generator, maxWidth: widths.generator }}>
         <button
           onClick={onPickGenerator}
-          className="flex flex-col items-start gap-0.5 text-xs bg-muted hover:bg-accent border border-border rounded px-2 py-1.5 transition-colors min-w-[96px]"
+          className="w-full flex flex-col items-start gap-0.5 text-xs bg-muted hover:bg-accent border border-border rounded px-2 py-1.5 transition-colors text-left"
         >
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 w-full">
             <span className="font-mono text-primary">{col.dataType}</span>
             <ChevronRight className="w-3 h-3 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-1">
-            {col.generatorConfig.fakerFn && (
-              <span className="text-[10px] text-muted-foreground leading-tight truncate max-w-[90px]">
-                {getFakerMappingLabel(col.generatorConfig.fakerFn) ?? col.generatorConfig.fakerFn}
-              </span>
-            )}
             {col.generatorConfig.locale && col.generatorConfig.locale !== 'en_US' && (
-              <span className="text-[11px]" title={col.generatorConfig.locale}>
+              <span className="text-[11px] ml-auto" title={col.generatorConfig.locale}>
                 {LOCALE_FLAG(col.generatorConfig.locale)}
               </span>
             )}
           </div>
+          {col.generatorConfig.fakerFn && (
+            <span
+              className="text-[10px] text-muted-foreground leading-tight"
+              style={{ maxWidth: widths.generator - 24, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              title={col.generatorConfig.fakerFn}
+            >
+              {getFakerMappingLabel(col.generatorConfig.fakerFn) ?? col.generatorConfig.fakerFn}
+              {col.generatorConfig.personaGroup && ` · 👤 ${col.generatorConfig.personaGroup}`}
+            </span>
+          )}
         </button>
       </td>
 
       {/* Index */}
-      <td className="py-2 pr-4">
+      <td className="py-2 pr-4" style={{ width: widths.index, maxWidth: widths.index }}>
         <select
           className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
           value={col.indexType}
@@ -334,7 +423,7 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
       </td>
 
       {/* Pool ref (FK: cross-table dropdown + gear; PK: show pool name) */}
-      <td className="py-2 pr-4">
+      <td className="py-2 pr-4" style={{ width: widths.pool, maxWidth: widths.pool }}>
         {col.indexType === 'foreign_key' ? (
           <div className="flex items-center gap-1">
             <select
@@ -367,7 +456,7 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
       </td>
 
       {/* Not Null */}
-      <td className="py-2 pr-4">
+      <td className="py-2 pr-4" style={{ width: widths.notNull, maxWidth: widths.notNull }}>
         <input
           type="checkbox"
           checked={col.notNull}
@@ -377,7 +466,7 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
       </td>
 
       {/* Null % */}
-      <td className="py-2 pr-4">
+      <td className="py-2 pr-4" style={{ width: widths.nullPct, maxWidth: widths.nullPct }}>
         <input
           type="number"
           min={0} max={100} step={5}
@@ -388,17 +477,29 @@ function ColumnRow({ col, thisTable, allProjectTables, onUpdate, onPickGenerator
         />
       </td>
 
-      {/* Sample values */}
-      <td className="py-2 pr-4">
-        {col.sampleValues && col.sampleValues.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {col.sampleValues.slice(0, 3).map((v, i) => (
-              <span key={i} className="text-xs bg-muted border border-border rounded px-1.5 py-0.5 font-mono text-muted-foreground">
-                {String(v).slice(0, 16)}
-              </span>
-            ))}
-          </div>
-        )}
+      {/* Sample values — live preview from backend; click 🔄 to re-roll */}
+      <td className="py-2 pr-4" style={{ width: widths.sample, maxWidth: widths.sample }}>
+        <div className="flex items-center gap-1.5 group/sample">
+          {liveSample !== null ? (
+            <span
+              className="text-xs bg-muted border border-border rounded px-1.5 py-0.5 font-mono text-muted-foreground truncate flex-1"
+              title={liveSample}
+              style={{ maxWidth: widths.sample - 32 }}
+            >
+              {liveSample === '' ? <span className="italic">(empty)</span> : liveSample}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground/50 italic">—</span>
+          )}
+          <button
+            onClick={() => fetchSample(Date.now())}
+            disabled={refreshing}
+            title="Re-roll sample"
+            className="opacity-0 group-hover/sample:opacity-100 text-muted-foreground hover:text-primary transition-all disabled:opacity-30"
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </td>
 
       {/* Delete */}

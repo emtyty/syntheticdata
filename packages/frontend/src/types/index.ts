@@ -18,6 +18,8 @@ export interface GeneratorConfig {
   nullRate?: number;
   fakerFn?: string;
   locale?: string;
+  /** Group key for coherent persona (used with `persona.*` fakerFns). */
+  personaGroup?: string;
   // Advanced FK controls (Phase 3)
   fkNullRate?: number;
   fkDistribution?: 'uniform' | 'weighted' | 'fixed_per_parent';

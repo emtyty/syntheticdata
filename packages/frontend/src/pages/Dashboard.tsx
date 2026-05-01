@@ -4,32 +4,43 @@ import { Sidebar } from '../components/layout/Sidebar.js';
 import { listProjects, getStats } from '../api/client.js';
 import type { Project } from '../types/index.js';
 
+function formatRelative(iso: string | null): string {
+  if (!iso) return 'No activity yet';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 10) return 'Just now';
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} min${min === 1 ? '' : 's'} ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hr / 24);
+  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [uptime, setUptime] = useState('000:00:00');
   const [totalRowsGenerated, setTotalRowsGenerated] = useState<number | null>(null);
   const [totalJobsCompleted, setTotalJobsCompleted] = useState<number | null>(null);
+  const [lastActivity, setLastActivity] = useState<string | null>(null);
+  const [, forceTick] = useState(0);
 
   useEffect(() => {
     listProjects().then(setProjects).catch(() => {});
     getStats().then(s => {
       setTotalRowsGenerated(s.totalRowsGenerated);
       setTotalJobsCompleted(s.totalJobsCompleted);
+      setLastActivity(s.lastActivity);
     }).catch(() => {});
   }, []);
 
-  // Mock uptime counter
+  // Refresh "X minutes ago" label every 30s without re-fetching
   useEffect(() => {
-    const start = Date.now();
-    const tick = () => {
-      const s = Math.floor((Date.now() - start) / 1000);
-      const h = Math.floor(s / 3600).toString().padStart(3, '0');
-      const m = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-      const sec = (s % 60).toString().padStart(2, '0');
-      setUptime(`${h}:${m}:${sec}`);
-    };
-    const id = setInterval(tick, 1000);
+    const id = setInterval(() => forceTick(t => t + 1), 30000);
     return () => clearInterval(id);
   }, []);
 
@@ -79,8 +90,8 @@ export function Dashboard() {
               </p>
             </div>
             <div className="px-6 py-3 bg-surface-container rounded-lg border border-outline-variant/10">
-              <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Uptime</p>
-              <p className="text-xl font-bold font-headline font-label">{uptime}</p>
+              <p className="text-[10px] font-label text-on-surface-variant uppercase tracking-widest">Last Generation</p>
+              <p className="text-xl font-bold font-headline" title={lastActivity ?? ''}>{formatRelative(lastActivity)}</p>
             </div>
           </div>
 

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Applied Rules — Synthetic Studio</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --text: #1a1f28;
+    --muted: #4a4f57;
+    --border: #c4c8d0;
+    --primary: #1e4be6;
+    --accent: #006879;
+    --code-bg: #eceff4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0e14;
+      --surface: #151a21;
+      --text: #f1f3fc;
+      --muted: #a8abb3;
+      --border: #44484f;
+      --primary: #85adff;
+      --accent: #99f7ff;
+      --code-bg: #1b2028;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    margin: 0;
+    padding: 2.5rem 1.5rem;
+  }
+  main {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-top: 2.5rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-top: 1.5rem;
+  }
+  p, li { font-size: 0.95rem; }
+  .lead {
+    font-size: 1.05rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+  .definition {
+    background: var(--surface);
+    border-left: 3px solid var(--primary);
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border-radius: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+    background: var(--surface);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--code-bg);
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  tr:last-child td { border-bottom: none; }
+  code {
+    font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+    background: var(--code-bg);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-size: 0.88em;
+    color: var(--accent);
+  }
+  ol li { margin-bottom: 0.5rem; }
+  .step {
+    display: inline-block;
+    background: var(--primary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 0.2em 0.6em;
+    border-radius: 3px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  .step.then { background: var(--accent); color: var(--bg); }
+  .footer-note {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Applied Rules in Synthetic Studio</h1>
+<p class="lead">How conditional rules work in the schema editor and how to add one.</p>
+
+<h2>What rules are</h2>
+
+<div class="definition">
+  Each row is normally generated independently per column — <code>status</code> is random,
+  <code>cancelled_at</code> is random, etc. A <strong>rule</strong> is a conditional override
+  that fires <em>after</em> the base generator runs:
+  <p style="margin: 0.75rem 0 0;"><strong>IF</strong> one or more conditions match → <strong>THEN</strong> override one column on that row.</p>
+</div>
+
+<p>That's how you make rows look internally consistent. Without rules, a row can end up with
+<code>status="active"</code> but <code>cancelled_at="2024-03-15"</code> — clearly fake. With a rule,
+you can say "if <code>status != 'cancelled'</code>, then <code>cancelled_at</code> is null."</p>
+
+<h2>Available actions (the THEN side)</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>What it does</th>
+      <th>Example value</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>Set to NULL</td><td>Force the column to null</td><td>(no value)</td></tr>
+    <tr><td>Ensure not null</td><td>Force the column to non-null</td><td>(no value)</td></tr>
+    <tr><td>Set constant value</td><td>Override with a fixed value</td><td><code>"cancelled"</code> or <code>42</code></td></tr>
+    <tr><td>Pick from list</td><td>Pick uniformly from a list</td><td><code>active, inactive, pending</code></td></tr>
+    <tr><td>Set number range</td><td>Override range for numbers</td><td><code>0-100</code></td></tr>
+    <tr><td>Derive offset from column</td><td>Date/number math relative to another column</td><td><code>created_at, 1, 30, days</code></td></tr>
+    <tr><td>Compute expression</td><td>Simple arithmetic between two columns</td><td><code>quantity * unit_price</code></td></tr>
+  </tbody>
+</table>
+
+<h2>How to add a rule</h2>
+
+<ol>
+  <li>In the schema editor (Tables tab), look at the right-side <strong>Conditions Applied</strong> sidebar.</li>
+  <li>Click <strong>+ Add Rule</strong> at the bottom.</li>
+  <li><span class="step">STEP 1</span> <strong>Conditions (IF):</strong> pick a column, an operator
+      (<code>==</code>, <code>!=</code>, <code>&lt;</code>, <code>contains</code>, <code>is null</code>, …),
+      and a value. Click "+ Add Condition" to AND another condition.</li>
+  <li><span class="step then">STEP 2</span> <strong>Action (THEN):</strong> pick the action and the target column.
+      Fill the value field if the action needs one — placeholder shows the format.</li>
+  <li>Click <strong>Save Rule</strong>.</li>
+</ol>
+
+<h2>Concrete examples — e-commerce template</h2>
+
+<h3>orders table</h3>
+<table>
+  <thead><tr><th>Rule</th><th>IF</th><th>THEN</th></tr></thead>
+  <tbody>
+    <tr><td>Cancelled orders have no total</td><td><code>status == "cancelled"</code></td><td><code>total</code> → Set range <code>0-50</code></td></tr>
+    <tr><td>Place date follows creation</td><td><code>status == "cancelled"</code></td><td><code>placed_at</code> → Derive offset <code>created_at, 0, 7, days</code></td></tr>
+    <tr><td>Refunds keep 90% of total</td><td><code>status == "refunded"</code></td><td><code>total</code> → Compute <code>total * 0.9</code> (n/a — see note below)</td></tr>
+  </tbody>
+</table>
+
+<h3>order_items table</h3>
+<table>
+  <thead><tr><th>Rule</th><th>IF</th><th>THEN</th></tr></thead>
+  <tbody>
+    <tr><td>Bulk discount over qty 3</td><td><code>quantity &gt; 3</code></td><td><code>unit_price</code> → Compute <code>unit_price * 0.85</code> (constant arithmetic limited)</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size: 0.85rem; color: var(--muted);">
+  <em>Note:</em> the Compute expression action currently only evaluates simple <code>colA op colB</code> patterns.
+  For multipliers like <code>amount * 0.9</code>, add a hidden column with the constant or use Set range / Set value instead.
+</p>
+
+<h2>Quick test</h2>
+<p>Open <code>smoke_test_ecom</code> → Tables tab → <code>orders</code> → <strong>+ Add Rule</strong>.
+Set <em>status <code>==</code> cancelled</em>, action "Set constant value" on <code>total</code> with value <code>0</code>.
+Save, then go to Generate tab and run a small batch. In the preview, every cancelled order will have <code>total = 0</code>.</p>
+
+<p class="footer-note">Generated for Synthetic Studio · runs entirely offline · no LLM, no API key.</p>
+
+</main>
+</body>
+</html>

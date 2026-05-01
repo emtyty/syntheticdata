@@ -262,9 +262,11 @@ export async function generateRowsChunked(
 
     const chunk = generateChunk(columns, chunkRows, chunkSeedInt, ctx, chunkIdx * chunkSize);
 
-    // Register new PK values into the pool for FK use in later tables/chunks
+    // Register integer PK values into the pool AFTER the sequential override
+    // in generateChunk. Non-integer PKs (uuid, string) are already registered
+    // by generateRows itself with their final values.
     for (const col of columns) {
-      if (col.indexType === 'primary_key' && col.poolName) {
+      if (col.indexType === 'primary_key' && col.poolName && col.dataType === 'integer') {
         const colValues = chunk.map(r => r[col.name]).filter((v): v is string | number => v !== null);
         if (colValues.length > 0) ctx.pool.appendToPool(col.poolName, colValues);
       }

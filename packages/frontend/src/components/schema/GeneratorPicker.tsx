@@ -196,6 +196,41 @@ const STRING_FAKER_GROUPS: FakerGroup[] = [
       { fn: 'phone.imei',          label: 'IMEI',         description: 'Device IMEI' },
     ],
   },
+  {
+    group: '✨ Rich Text (AI-feel)',
+    items: [
+      { fn: 'rich.bio',                label: 'Personal Bio',        description: '2-3 sentence bio: role + company + hobby' },
+      { fn: 'rich.productDescription', label: 'Product Description', description: 'Marketing copy with material + use-case' },
+      { fn: 'rich.review',             label: 'Product Review',      description: '★-rated review with sentiment' },
+      { fn: 'rich.supportTicket',      label: 'Support Ticket',      description: 'Realistic complaint subject + body' },
+      { fn: 'rich.companyAbout',       label: 'Company "About"',     description: '3-sentence company description' },
+      { fn: 'rich.tagline',            label: 'Marketing Tagline',   description: 'Short brand tagline' },
+      { fn: 'rich.tweet',              label: 'Social Post',         description: '< 280 chars w/ optional @ and #' },
+      { fn: 'rich.addressFull',        label: 'Full Address',        description: 'Multi-line: street + apt + city + zip + country' },
+    ],
+  },
+  {
+    group: '👤 Persona (coherent per row)',
+    items: [
+      { fn: 'persona.fullName',      label: 'Persona · Full Name',  description: 'Same person as other persona.* cols in same group' },
+      { fn: 'persona.firstName',     label: 'Persona · First Name', description: 'Coherent with persona.lastName' },
+      { fn: 'persona.lastName',      label: 'Persona · Last Name',  description: 'Coherent with persona.firstName' },
+      { fn: 'persona.email',         label: 'Persona · Email',      description: 'Email derived from name (alice.zhang@…)' },
+      { fn: 'persona.username',      label: 'Persona · Username',   description: 'Handle derived from name' },
+      { fn: 'persona.phone',         label: 'Persona · Phone',      description: 'Phone for the same person' },
+      { fn: 'persona.birthdate',     label: 'Persona · Birthdate',  description: 'YYYY-MM-DD, age 21-65' },
+      { fn: 'persona.age',           label: 'Persona · Age',        description: 'Matches birthdate' },
+      { fn: 'persona.jobTitle',      label: 'Persona · Job Title',  description: 'Coherent with company' },
+      { fn: 'persona.company',       label: 'Persona · Company',    description: 'Same company as job title' },
+      { fn: 'persona.city',          label: 'Persona · City',       description: 'Coherent with state/country' },
+      { fn: 'persona.state',         label: 'Persona · State',      description: 'Coherent with city' },
+      { fn: 'persona.country',       label: 'Persona · Country',    description: 'Coherent with city/state' },
+      { fn: 'persona.postalCode',    label: 'Persona · Postal Code',description: 'Same locale as address' },
+      { fn: 'persona.streetAddress', label: 'Persona · Street',     description: 'Same locale as city' },
+      { fn: 'persona.avatarUrl',     label: 'Persona · Avatar URL', description: 'Dicebear seeded by persona' },
+      { fn: 'persona.bio',           label: 'Persona · Bio',        description: 'Bio mentioning their job and city' },
+    ],
+  },
 ];
 
 const FLOAT_FAKER_GROUPS: FakerGroup[] = [
@@ -236,51 +271,15 @@ interface LocaleOption {
 
 const LOCALE_GROUPS: { group: string; locales: LocaleOption[] }[] = [
   {
-    group: 'English',
+    group: 'Locales',
     locales: [
-      { value: 'en_US', label: 'English (US)',  flag: '🇺🇸' },
-      { value: 'en_GB', label: 'English (UK)',  flag: '🇬🇧' },
-      { value: 'en_AU', label: 'English (AU)',  flag: '🇦🇺' },
-      { value: 'en_CA', label: 'English (CA)',  flag: '🇨🇦' },
-    ],
-  },
-  {
-    group: 'Asian',
-    locales: [
-      { value: 'ja',    label: 'Japanese',      flag: '🇯🇵' },
-      { value: 'vi',    label: 'Vietnamese',    flag: '🇻🇳' },
-      { value: 'zh_CN', label: 'Chinese (CN)',  flag: '🇨🇳' },
-      { value: 'ko',    label: 'Korean',        flag: '🇰🇷' },
-      { value: 'th',    label: 'Thai',          flag: '🇹🇭' },
-      { value: 'id_ID', label: 'Indonesian',    flag: '🇮🇩' },
-    ],
-  },
-  {
-    group: 'European',
-    locales: [
-      { value: 'fr',    label: 'French',        flag: '🇫🇷' },
-      { value: 'de',    label: 'German',        flag: '🇩🇪' },
-      { value: 'es',    label: 'Spanish',       flag: '🇪🇸' },
-      { value: 'it',    label: 'Italian',       flag: '🇮🇹' },
-      { value: 'pt_BR', label: 'Portuguese (BR)',flag: '🇧🇷' },
-      { value: 'nl',    label: 'Dutch',         flag: '🇳🇱' },
-      { value: 'pl',    label: 'Polish',        flag: '🇵🇱' },
-      { value: 'sv',    label: 'Swedish',       flag: '🇸🇪' },
-      { value: 'da',    label: 'Danish',        flag: '🇩🇰' },
-      { value: 'fi',    label: 'Finnish',       flag: '🇫🇮' },
-      { value: 'nb_NO', label: 'Norwegian',     flag: '🇳🇴' },
-      { value: 'cs_CZ', label: 'Czech',         flag: '🇨🇿' },
-      { value: 'hu',    label: 'Hungarian',     flag: '🇭🇺' },
-    ],
-  },
-  {
-    group: 'Other',
-    locales: [
-      { value: 'ru',    label: 'Russian',       flag: '🇷🇺' },
-      { value: 'uk',    label: 'Ukrainian',     flag: '🇺🇦' },
-      { value: 'ar',    label: 'Arabic',        flag: '🇸🇦' },
-      { value: 'he',    label: 'Hebrew',        flag: '🇮🇱' },
-      { value: 'tr',    label: 'Turkish',       flag: '🇹🇷' },
+      { value: 'en_US', label: 'English (US)', flag: '🇺🇸' },
+      { value: 'fr',    label: 'French',       flag: '🇫🇷' },
+      { value: 'de',    label: 'German',       flag: '🇩🇪' },
+      { value: 'es',    label: 'Spanish',      flag: '🇪🇸' },
+      { value: 'da',    label: 'Danish',       flag: '🇩🇰' },
+      { value: 'vi',    label: 'Vietnamese',   flag: '🇻🇳' },
+      { value: 'ja',    label: 'Japanese',     flag: '🇯🇵' },
     ],
   },
 ];
@@ -327,6 +326,7 @@ interface Props {
   current: ColumnDataType;
   currentFakerFn?: string;
   currentLocale?: string;
+  currentPersonaGroup?: string;
   columnName: string;
   onSelect: (type: ColumnDataType, config: GeneratorConfig) => void;
   onClose: () => void;
@@ -334,10 +334,11 @@ interface Props {
 
 type TabId = 'mapping' | 'locale';
 
-export function GeneratorPicker({ current, currentFakerFn, currentLocale, columnName, onSelect, onClose }: Props) {
+export function GeneratorPicker({ current, currentFakerFn, currentLocale, currentPersonaGroup, columnName, onSelect, onClose }: Props) {
   const [selectedType, setSelectedType] = useState<ColumnDataType>(current);
   const [selectedLocale, setSelectedLocale] = useState<string>(currentLocale ?? 'en_US');
   const [activeTab, setActiveTab] = useState<TabId>('mapping');
+  const [personaGroup, setPersonaGroup] = useState<string>(currentPersonaGroup ?? 'default');
 
   const groups = FAKER_GROUPS_BY_TYPE[selectedType];
   const autoFn = useMemo(() => detectDefaultFakerFn(columnName), [columnName]);
@@ -345,6 +346,8 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, column
   const [selectedFn, setSelectedFn] = useState<string | undefined>(
     currentFakerFn ?? (selectedType === 'string' || selectedType === 'float' ? autoFn : undefined),
   );
+
+  const isPersonaFn = selectedFn?.startsWith('persona.');
 
   function handleTypeSelect(type: ColumnDataType) {
     setSelectedType(type);
@@ -357,6 +360,9 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, column
     const config: GeneratorConfig = { ...gen.defaultConfig };
     if (selectedFn) config.fakerFn = selectedFn;
     if (selectedLocale && selectedLocale !== 'en_US') config.locale = selectedLocale;
+    if (selectedFn?.startsWith('persona.') && personaGroup.trim()) {
+      config.personaGroup = personaGroup.trim();
+    }
     onSelect(selectedType, config);
     onClose();
   }
@@ -528,6 +534,25 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, column
           )}
         </div>
 
+        {/* Persona Group input — only shown when a persona.* fn is selected */}
+        {isPersonaFn && (
+          <div className="px-4 py-3 border-t border-border bg-muted/30 shrink-0">
+            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+              Persona Group
+            </label>
+            <input
+              type="text"
+              value={personaGroup}
+              onChange={e => setPersonaGroup(e.target.value)}
+              placeholder="e.g. customer, employee, default"
+              className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <p className="text-[11px] text-muted-foreground mt-1.5">
+              All <code className="font-mono">persona.*</code> columns sharing this group will reference the same person per row.
+            </p>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border flex items-center justify-between shrink-0">
           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
@@ -535,6 +560,9 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, column
             {selectedMappingLabel && <><span>→</span><span className="text-foreground">{selectedMappingLabel}</span></>}
             {selectedLocale !== 'en_US' && (
               <span className="ml-1 text-primary/80">{selectedLocaleOption?.flag} {selectedLocaleOption?.label}</span>
+            )}
+            {isPersonaFn && (
+              <span className="ml-1 text-primary/80">👤 {personaGroup}</span>
             )}
           </div>
           <div className="flex gap-2">

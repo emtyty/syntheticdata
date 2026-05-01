@@ -43,6 +43,13 @@ export interface GeneratorConfig {
   fakerFn?: string;
   // locale (Faker)
   locale?: string;
+  // ── Persona coherence ───────────────────────────────────────────────────────
+  /**
+   * Group key for coherent personas. Columns sharing the same `personaGroup`
+   * pull from the same per-row persona, so name/email/phone/city all match.
+   * Only effective when `fakerFn` starts with `persona.*`.
+   */
+  personaGroup?: string;
 
   // ── Advanced FK controls (Phase 3) ──────────────────────────────────────────
   /** Fraction of FK rows that will be null (0–1). Applied before pool sampling. */
