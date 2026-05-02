@@ -23,5 +23,8 @@ await app.register(templateRoutes, { prefix: '/api/v1' });
 app.get('/health', async () => ({ ok: true, ts: new Date().toISOString() }));
 
 const port = Number(process.env.PORT ?? 3001);
-await app.listen({ port, host: '0.0.0.0' });
+// Bind to loopback by default — this is a local dev tool with no auth.
+// Override with HOST=0.0.0.0 (or your LAN IP) only when intentional.
+const host = process.env.HOST ?? '127.0.0.1';
+await app.listen({ port, host });
 console.log(`Backend running on http://localhost:${port}`);

@@ -17,8 +17,24 @@ export function getTempDir(): string {
   return TEMP_DIR;
 }
 
+/**
+ * Resolve a path and assert it stays inside the controlled temp directory.
+ * Defense-in-depth against path-traversal attempts that slip through input
+ * validation upstream.
+ */
+export function isInsideTempDir(p: string): boolean {
+  const resolvedRoot = path.resolve(getTempDir());
+  const resolvedTarget = path.resolve(p);
+  return resolvedTarget === resolvedRoot
+    || resolvedTarget.startsWith(resolvedRoot + path.sep);
+}
+
 export function jobTempPath(jobId: string, suffix = 'jsonl'): string {
-  return path.join(getTempDir(), `${jobId}_${suffix}.jsonl`);
+  const candidate = path.join(getTempDir(), `${jobId}_${suffix}.jsonl`);
+  if (!isInsideTempDir(candidate)) {
+    throw new Error(`Refusing to build temp path outside temp dir: ${candidate}`);
+  }
+  return candidate;
 }
 
 /** Append a chunk of rows as JSONL lines to a temp file. */

@@ -16,6 +16,12 @@ import type { DatasetSchema, Project, TableRowConfig } from '../types/index.js';
 
 const cancellationTokens = new Map<string, { cancelled: boolean }>();
 
+// ─── ID validation ─────────────────────────────────────────────────────────────
+// Any client-supplied id that may be used downstream as part of a filesystem
+// path or DB key must match this format. Mirrors the format produced by nanoid.
+const SafeIdRe = /^[A-Za-z0-9_-]{1,64}$/;
+const SafeIdZ = z.string().regex(SafeIdRe, 'invalid id format');
+
 // ─── Zod schemas ───────────────────────────────────────────────────────────────
 
 const GeneratorConfigZ = z.object({
@@ -69,12 +75,34 @@ const ProjectBodyZ = z.object({
   tables: z.array(TableZ),
 });
 
-// ─── Helper ────────────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function getProject(id: string, reply: FastifyReply): Project | null {
   const p = projectStore.get(id);
   if (!p) { reply.code(404).send({ ok: false, error: 'Project not found' }); return null; }
   return p;
+}
+
+/**
+ * Replace any client-supplied table/column id that doesn't match SafeIdRe with
+ * a fresh nanoid, so unsafe characters can never reach filesystem paths.
+ *
+ * On UPDATE, prefer the EXISTING table ids (matched by table name) so saved
+ * jobs/diagrams that reference the old id continue to work.
+ */
+function sanitizeTableIds(tables: DatasetSchema[], existing?: DatasetSchema[]): DatasetSchema[] {
+  const existingByName = new Map((existing ?? []).map(t => [t.name, t.id]));
+  return tables.map(t => {
+    const safeTableId = SafeIdRe.test(t.id) ? t.id : (existingByName.get(t.name) ?? nanoid());
+    return {
+      ...t,
+      id: safeTableId,
+      columns: t.columns.map(c => ({
+        ...c,
+        id: SafeIdRe.test(c.id) ? c.id : nanoid(),
+      })),
+    };
+  });
 }
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
@@ -100,7 +128,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const project: Project = {
       id: nanoid(),
       name: parsed.data.name,
-      tables: parsed.data.tables as DatasetSchema[],
+      tables: sanitizeTableIds(parsed.data.tables as DatasetSchema[]),
       createdAt: now,
       updatedAt: now,
     };
@@ -110,6 +138,7 @@ export async function projectRoutes(app: FastifyInstance) {
 
   // Update project
   app.put<{ Params: { id: string } }>('/projects/:id', async (req, reply) => {
+    if (!SafeIdRe.test(req.params.id)) return reply.code(400).send({ ok: false, error: 'invalid id' });
     const existing = getProject(req.params.id, reply);
     if (!existing) return;
     const parsed = ProjectBodyZ.safeParse(req.body);
@@ -117,7 +146,7 @@ export async function projectRoutes(app: FastifyInstance) {
     const updated: Project = {
       ...existing,
       name: parsed.data.name,
-      tables: parsed.data.tables as DatasetSchema[],
+      tables: sanitizeTableIds(parsed.data.tables as DatasetSchema[], existing.tables),
       updatedAt: new Date().toISOString(),
     };
     projectStore.set(updated);
@@ -198,9 +227,9 @@ export async function projectRoutes(app: FastifyInstance) {
 
   app.post('/generate/project', async (req, reply) => {
     const parsed = z.object({
-      projectId: z.string(),
+      projectId: SafeIdZ,
       tableConfigs: z.array(z.object({
-        tableId: z.string(),
+        tableId: SafeIdZ,
         rowCount: z.number().int().min(1).max(10_000_000),
       })),
       seed: z.number().optional(),
@@ -210,11 +239,21 @@ export async function projectRoutes(app: FastifyInstance) {
     const project = getProject(parsed.data.projectId, reply);
     if (!project) return;
 
+    // Every requested tableId MUST exist in the loaded project. Belt-and-
+    // suspenders — even with SafeIdZ regex above, this prevents arbitrary
+    // attacker-shaped ids from being persisted into resultPaths.
+    const projectTableIds = new Set(project.tables.map(t => t.id));
+    const unknown = parsed.data.tableConfigs.find(tc => !projectTableIds.has(tc.tableId));
+    if (unknown) {
+      return reply.code(400).send({ ok: false, error: `Unknown tableId: ${unknown.tableId}` });
+    }
+
     const seed = parsed.data.seed ?? Math.floor(Math.random() * 2 ** 31);
     const now = new Date().toISOString();
     const jobId = nanoid();
 
-    // Pre-allocate JSONL paths for all tables
+    // Pre-allocate JSONL paths for all tables. jobTempPath() asserts the
+    // resolved path stays inside the temp dir — defense in depth.
     const resultPaths: Record<string, string> = {};
     for (const tc of parsed.data.tableConfigs) {
       resultPaths[tc.tableId] = jobTempPath(`${jobId}_${tc.tableId}`);

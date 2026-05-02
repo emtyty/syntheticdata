@@ -36,3 +36,9 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Claude Code local state
+.claude/
+
+# Local runtime data (SQLite DB, generated job artifacts)
+packages/backend/data/

@@ -7,6 +7,18 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { isInsideTempDir } from '../services/tempfile.service.js';
+
+/**
+ * Only unlink files that resolve inside the controlled temp dir. Defense in
+ * depth against any attacker-supplied path that may have been persisted into
+ * a job's `resultPaths` map before input validation was tightened.
+ */
+function safeUnlink(p: string | null | undefined): void {
+  if (!p) return;
+  if (!isInsideTempDir(p)) return;
+  try { fs.unlinkSync(p); } catch { /* ignore */ }
+}
 
 // ─── Open DB ──────────────────────────────────────────────────────────────────
 
@@ -86,17 +98,13 @@ const oldJobs = db
 
 for (const row of oldJobs) {
   // Delete single-table result file
-  if (row.result_path) {
-    try { fs.unlinkSync(row.result_path); } catch { /* ignore */ }
-  }
+  safeUnlink(row.result_path);
   // Delete project result files
   try {
     const data = JSON.parse(row.data) as Record<string, unknown>;
     const resultPaths = data.resultPaths as Record<string, string> | undefined;
     if (resultPaths) {
-      for (const p of Object.values(resultPaths)) {
-        try { fs.unlinkSync(p); } catch { /* ignore */ }
-      }
+      for (const p of Object.values(resultPaths)) safeUnlink(p);
     }
   } catch { /* ignore */ }
 }
