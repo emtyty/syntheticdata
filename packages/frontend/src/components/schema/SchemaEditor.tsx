@@ -115,15 +115,15 @@ export function SchemaEditor() {
       {/* Main column table */}
       <div className="flex-1 flex flex-col">
         {/* Topbar */}
-        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-outline-variant bg-surface-container/50">
           <div className="flex items-center gap-3">
-            <Settings2 className="w-4 h-4 text-muted-foreground" />
+            <Settings2 className="w-4 h-4 text-on-surface-variant" />
             <input
               className="bg-transparent text-sm font-semibold focus:outline-none focus:border-b focus:border-primary"
               value={schema.name}
               onChange={e => setSchema({ ...schema, name: e.target.value })}
             />
-            <span className="text-xs text-muted-foreground border border-border rounded px-1.5 py-0.5">
+            <span className="text-xs text-on-surface-variant border border-outline-variant rounded px-1.5 py-0.5">
               {schema.sourceType}
             </span>
           </div>
@@ -131,7 +131,7 @@ export function SchemaEditor() {
             {!isProjectTable && (
               <button
                 onClick={() => setStep('import')}
-                className="text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors"
+                className="text-sm text-on-surface-variant hover:text-on-surface px-3 py-1.5 rounded-md hover:bg-surface-container-high transition-colors"
               >
                 Back
               </button>
@@ -139,7 +139,7 @@ export function SchemaEditor() {
             <button
               onClick={handleNext}
               disabled={saving || schema.columns.length === 0}
-              className="flex items-center gap-2 bg-primary text-primary-foreground text-sm px-4 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 bg-primary text-on-primary-fixed text-sm px-4 py-1.5 rounded-md hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {saving ? 'Saving...' : isProjectTable ? 'Go to Generate' : 'Next: Generate'}
               <ArrowRight className="w-3.5 h-3.5" />
@@ -148,7 +148,7 @@ export function SchemaEditor() {
         </div>
 
         {error && (
-          <div className="mx-6 mt-3 bg-destructive/10 border border-destructive/30 rounded-md px-4 py-2 text-sm text-destructive">
+          <div className="mx-6 mt-3 bg-error/10 border border-error/30 rounded-md px-4 py-2 text-sm text-error">
             {error}
           </div>
         )}
@@ -157,7 +157,7 @@ export function SchemaEditor() {
         <div className="flex-1 overflow-auto p-6">
           <table className="text-sm border-collapse" style={{ tableLayout: 'fixed' }}>
             <thead>
-              <tr className="text-left text-xs text-muted-foreground border-b border-border">
+              <tr className="text-left text-xs text-on-surface-variant border-b border-outline-variant">
                 <ResizableTh colKey="name"      width={widths.name}      startResize={startResize}>Column Name</ResizableTh>
                 <ResizableTh colKey="generator" width={widths.generator} startResize={startResize}>Generator</ResizableTh>
                 <ResizableTh colKey="index"     width={widths.index}     startResize={startResize}>Index</ResizableTh>
@@ -186,14 +186,14 @@ export function SchemaEditor() {
           </table>
 
           {schema.columns.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground text-sm">
+            <div className="text-center py-16 text-on-surface-variant text-sm">
               No columns yet. Add one below.
             </div>
           )}
 
           <button
             onClick={addColumn}
-            className="mt-4 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground border border-dashed border-border hover:border-primary/50 rounded-md px-4 py-2 transition-colors"
+            className="mt-4 flex items-center gap-2 text-sm text-on-surface-variant hover:text-on-surface border border-dashed border-outline-variant hover:border-primary/50 rounded-md px-4 py-2 transition-colors"
           >
             <Plus className="w-4 h-4" /> Add Column
           </button>
@@ -201,36 +201,36 @@ export function SchemaEditor() {
       </div>
 
       {/* Rules sidebar */}
-      <div className="w-64 border-l border-border bg-card/30 flex flex-col">
-        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Conditions Applied</span>
+      <div className="w-64 border-l border-outline-variant bg-surface-container/30 flex flex-col">
+        <div className="px-4 py-3 border-b border-outline-variant flex items-center justify-between">
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Conditions Applied</span>
         </div>
 
         <div className="flex-1 overflow-auto p-3 space-y-2">
           {schema.rules.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-6">No rules yet</p>
+            <p className="text-xs text-on-surface-variant text-center py-6">No rules yet</p>
           )}
           {schema.rules.map(rule => (
-            <div key={rule.id} className="bg-card border border-border rounded-md p-2.5 text-xs">
+            <div key={rule.id} className="bg-surface-container border border-outline-variant rounded-md p-2.5 text-xs">
               <div className="flex items-start justify-between gap-1">
                 <div>
                   <span className="text-green-400 font-medium">{rule.name ?? 'Rule'}</span>
-                  <div className="text-muted-foreground mt-1">
+                  <div className="text-on-surface-variant mt-1">
                     {rule.conditions.map((c, i) => (
                       <span key={i}>
                         {i > 0 && <span className="text-primary"> AND </span>}
-                        <span className="text-foreground">{c.column}</span>{' '}
-                        <span className="text-muted-foreground">{c.op}</span>{' '}
+                        <span className="text-on-surface">{c.column}</span>{' '}
+                        <span className="text-on-surface-variant">{c.op}</span>{' '}
                         {c.value !== undefined && <span className="text-yellow-300">"{String(c.value)}"</span>}
                       </span>
                     ))}
                   </div>
-                  <div className="text-muted-foreground mt-1">
-                    → <span className="text-foreground">{rule.actionColumn}</span>{' '}
-                    <span className="text-muted-foreground">{rule.action}</span>
+                  <div className="text-on-surface-variant mt-1">
+                    → <span className="text-on-surface">{rule.actionColumn}</span>{' '}
+                    <span className="text-on-surface-variant">{rule.action}</span>
                   </div>
                 </div>
-                <button onClick={() => removeRule(rule.id)} className="text-muted-foreground hover:text-destructive">
+                <button onClick={() => removeRule(rule.id)} className="text-on-surface-variant hover:text-error">
                   <Trash2 className="w-3 h-3" />
                 </button>
               </div>
@@ -238,10 +238,10 @@ export function SchemaEditor() {
           ))}
         </div>
 
-        <div className="p-3 border-t border-border">
+        <div className="p-3 border-t border-outline-variant">
           <button
             onClick={() => setShowConditionBuilder(true)}
-            className="w-full flex items-center justify-center gap-2 bg-muted hover:bg-accent text-sm py-2 rounded-md transition-colors"
+            className="w-full flex items-center justify-center gap-2 bg-surface-container-high hover:bg-surface-bright text-sm py-2 rounded-md transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> Add Rule
           </button>
@@ -356,7 +356,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
   }, [sampleKey]);
 
   return (
-    <tr className="border-b border-border/50 hover:bg-card/50 group">
+    <tr className="border-b border-outline-variant/50 hover:bg-surface-container/50 group">
       {/* Name */}
       <td className="py-2 pr-4" style={{ width: widths.name, maxWidth: widths.name }}>
         <input
@@ -370,11 +370,11 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
       <td className="py-2 pr-4" style={{ width: widths.generator, maxWidth: widths.generator }}>
         <button
           onClick={onPickGenerator}
-          className="w-full flex flex-col items-start gap-0.5 text-xs bg-muted hover:bg-accent border border-border rounded px-2 py-1.5 transition-colors text-left"
+          className="w-full flex flex-col items-start gap-0.5 text-xs bg-surface-container-high hover:bg-surface-bright border border-outline-variant rounded px-2 py-1.5 transition-colors text-left"
         >
           <div className="flex items-center gap-1 w-full">
             <span className="font-mono text-primary">{col.dataType}</span>
-            <ChevronRight className="w-3 h-3 text-muted-foreground" />
+            <ChevronRight className="w-3 h-3 text-on-surface-variant" />
             {col.generatorConfig.locale && col.generatorConfig.locale !== 'en_US' && (
               <span className="text-[11px] ml-auto" title={col.generatorConfig.locale}>
                 {LOCALE_FLAG(col.generatorConfig.locale)}
@@ -383,7 +383,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
           </div>
           {col.generatorConfig.fakerFn && (
             <span
-              className="text-[10px] text-muted-foreground leading-tight"
+              className="text-[10px] text-on-surface-variant leading-tight"
               style={{ maxWidth: widths.generator - 24, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               title={col.generatorConfig.fakerFn}
             >
@@ -397,7 +397,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
       {/* Index */}
       <td className="py-2 pr-4" style={{ width: widths.index, maxWidth: widths.index }}>
         <select
-          className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="bg-transparent text-xs border border-outline-variant rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
           value={col.indexType}
           onChange={e => {
             const idx = e.target.value as IndexType;
@@ -427,7 +427,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
         {col.indexType === 'foreign_key' ? (
           <div className="flex items-center gap-1">
             <select
-              className="bg-transparent text-xs border border-border rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary max-w-[130px]"
+              className="bg-transparent text-xs border border-outline-variant rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary max-w-[130px]"
               value={col.generatorConfig.poolRef ?? ''}
               onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, poolRef: e.target.value } })}
             >
@@ -439,10 +439,10 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
             <button
               onClick={onOpenFkConfig}
               title="FK distribution config"
-              className={`p-1 rounded hover:bg-muted transition-colors ${
+              className={`p-1 rounded hover:bg-surface-container-high transition-colors ${
                 col.generatorConfig.fkDistribution && col.generatorConfig.fkDistribution !== 'uniform'
                   ? 'text-primary'
-                  : 'text-muted-foreground'
+                  : 'text-on-surface-variant'
               }`}
             >
               <SlidersHorizontal className="w-3 h-3" />
@@ -451,7 +451,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
         ) : col.indexType === 'primary_key' && col.poolName ? (
           <span className="text-xs font-mono text-yellow-500/80">{col.poolName}</span>
         ) : (
-          <span className="text-muted-foreground text-xs">—</span>
+          <span className="text-on-surface-variant text-xs">—</span>
         )}
       </td>
 
@@ -470,7 +470,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
         <input
           type="number"
           min={0} max={100} step={5}
-          className="bg-transparent text-xs border border-border rounded px-1.5 py-1 w-16 focus:outline-none focus:ring-1 focus:ring-primary"
+          className="bg-transparent text-xs border border-outline-variant rounded px-1.5 py-1 w-16 focus:outline-none focus:ring-1 focus:ring-primary"
           value={Math.round((col.generatorConfig.nullRate ?? 0) * 100)}
           disabled={col.notNull}
           onChange={e => onUpdate({ ...col, generatorConfig: { ...col.generatorConfig, nullRate: Number(e.target.value) / 100 } })}
@@ -482,20 +482,20 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
         <div className="flex items-center gap-1.5 group/sample">
           {liveSample !== null ? (
             <span
-              className="text-xs bg-muted border border-border rounded px-1.5 py-0.5 font-mono text-muted-foreground truncate flex-1"
+              className="text-xs bg-surface-container-high border border-outline-variant rounded px-1.5 py-0.5 font-mono text-on-surface-variant truncate flex-1"
               title={liveSample}
               style={{ maxWidth: widths.sample - 32 }}
             >
               {liveSample === '' ? <span className="italic">(empty)</span> : liveSample}
             </span>
           ) : (
-            <span className="text-xs text-muted-foreground/50 italic">—</span>
+            <span className="text-xs text-on-surface-variant/50 italic">—</span>
           )}
           <button
             onClick={() => fetchSample(Date.now())}
             disabled={refreshing}
             title="Re-roll sample"
-            className="opacity-0 group-hover/sample:opacity-100 text-muted-foreground hover:text-primary transition-all disabled:opacity-30"
+            className="opacity-0 group-hover/sample:opacity-100 text-on-surface-variant hover:text-primary transition-all disabled:opacity-30"
           >
             <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
@@ -506,7 +506,7 @@ function ColumnRow({ col, widths, thisTable, allProjectTables, onUpdate, onPickG
       <td className="py-2">
         <button
           onClick={onRemove}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+          className="opacity-0 group-hover:opacity-100 text-on-surface-variant hover:text-error transition-all"
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>

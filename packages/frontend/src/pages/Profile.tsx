@@ -28,11 +28,21 @@ function useLightTheme(): [boolean, (v: boolean) => void] {
   return [light, set];
 }
 
+function randomHex(length: number): string {
+  const bytes = new Uint8Array(length / 2);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function Profile() {
   const [lightMode, setLightMode] = useLightTheme();
   const [alertPulse, setAlertPulse] = useSetting('pref_alertPulse', false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem('pref_apiKey') ?? `sk_live_${randomHex(8)}`;
+  });
+  const [keyJustRotated, setKeyJustRotated] = useState(false);
 
   function handleSave() {
     setSaved(true);
@@ -44,6 +54,46 @@ export function Profile() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  function handleGenerateKey() {
+    const next = `sk_live_${randomHex(8)}`;
+    localStorage.setItem('pref_apiKey', next);
+    setApiKey(next);
+    setKeyJustRotated(true);
+    setTimeout(() => setKeyJustRotated(false), 2000);
+  }
+
+  function handleExportLogs() {
+    const config: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('pref_')) {
+        config[k] = localStorage.getItem(k) ?? '';
+      }
+    }
+    const payload = {
+      instanceId: INSTANCE_ID,
+      exportedAt: new Date().toISOString(),
+      preferences: config,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `synthetic-studio-config-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleTerminateSession() {
+    if (!confirm('Clear all preferences and reload? Light mode, alert pulse, and the rotated API key will be reset.')) return;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('pref_')) localStorage.removeItem(k);
+    }
+    document.documentElement.classList.remove('light');
+    location.reload();
   }
 
   return (
@@ -64,13 +114,6 @@ export function Profile() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-8">
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
-              <span className="material-symbols-outlined">help_outline</span>
-            </button>
-            <div className="h-6 w-px bg-outline-variant/20 mx-2" />
             <span className="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">
               Status: <span className="text-tertiary">Online</span>
             </span>
@@ -162,8 +205,11 @@ export function Profile() {
                   <span className="material-symbols-outlined text-primary">security</span>
                   Auth Matrix
                 </h2>
-                <button className="text-[10px] font-label uppercase tracking-widest text-primary hover:underline transition-all">
-                  Generate New Key
+                <button
+                  onClick={handleGenerateKey}
+                  className="text-[10px] font-label uppercase tracking-widest text-primary hover:underline transition-all"
+                >
+                  {keyJustRotated ? 'Rotated ✓' : 'Generate New Key'}
                 </button>
               </div>
               <div className="overflow-x-auto">
@@ -179,7 +225,7 @@ export function Profile() {
                   <tbody className="divide-y divide-outline-variant/5">
                     <tr>
                       <td className="py-4 px-2">
-                        <code className="font-label text-sm text-on-surface">sk_live_...api1</code>
+                        <code className="font-label text-sm text-on-surface">{apiKey}</code>
                       </td>
                       <td className="py-4 px-2">
                         <span className="px-2 py-0.5 bg-surface-container-highest rounded text-[10px] font-label text-on-surface-variant">Full_Write</span>
@@ -288,7 +334,10 @@ export function Profile() {
                   </div>
                   <h3 className="font-headline font-bold">Quick Export</h3>
                   <p className="text-xs text-on-surface-variant">Download all configuration logs for audit.</p>
-                  <button className="w-full py-2 bg-surface-variant hover:bg-surface-bright rounded text-[10px] font-label uppercase tracking-widest transition-all">
+                  <button
+                    onClick={handleExportLogs}
+                    className="w-full py-2 bg-surface-variant hover:bg-surface-bright rounded text-[10px] font-label uppercase tracking-widest transition-all"
+                  >
                     Export Logs
                   </button>
                 </div>
@@ -298,7 +347,10 @@ export function Profile() {
                   </div>
                   <h3 className="font-headline font-bold text-error">Terminal Lock</h3>
                   <p className="text-xs text-on-surface-variant">Terminate all active session tokens.</p>
-                  <button className="w-full py-2 bg-error hover:brightness-110 text-on-primary-fixed rounded text-[10px] font-label uppercase tracking-widest transition-all font-bold">
+                  <button
+                    onClick={handleTerminateSession}
+                    className="w-full py-2 bg-error hover:brightness-110 text-on-primary-fixed rounded text-[10px] font-label uppercase tracking-widest transition-all font-bold"
+                  >
                     Terminate Session
                   </button>
                 </div>

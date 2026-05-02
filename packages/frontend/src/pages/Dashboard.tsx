@@ -64,13 +64,6 @@ export function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-4 ml-8">
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all">
-              <span className="material-symbols-outlined">help_outline</span>
-            </button>
-            <div className="h-6 w-px bg-outline-variant/20 mx-2" />
             <div className="text-right hidden md:block">
               <p className="text-[10px] font-label text-tertiary uppercase tracking-tighter">System Status</p>
               <p className="text-[10px] font-label text-on-surface">NOMINAL</p>

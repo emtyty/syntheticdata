@@ -66,14 +66,14 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-card border border-border rounded-xl shadow-2xl w-[420px] max-h-[90vh] overflow-y-auto">
+      <div className="bg-surface-container border border-outline-variant rounded-xl shadow-2xl w-[420px] max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-outline-variant">
           <div>
             <p className="text-sm font-semibold">FK Distribution Config</p>
-            <p className="text-xs text-muted-foreground font-mono mt-0.5">{col.name}</p>
+            <p className="text-xs text-on-surface-variant font-mono mt-0.5">{col.name}</p>
           </div>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -81,11 +81,11 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
         <div className="p-5 space-y-5">
           {/* Distribution mode */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
               Distribution
             </label>
             <select
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
               value={dist}
               onChange={e => setDist(e.target.value as typeof dist)}
             >
@@ -103,43 +103,43 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
 
           {/* weighted sub-controls */}
           {dist === 'weighted' && hasFixedValues && (
-            <div className="bg-muted/30 rounded-lg p-4 space-y-2 border border-border">
-              <p className="text-xs font-semibold text-muted-foreground">Value weights</p>
+            <div className="bg-surface-container-high/30 rounded-lg p-4 space-y-2 border border-outline-variant">
+              <p className="text-xs font-semibold text-on-surface-variant">Value weights</p>
               {parsedFixed.map(v => (
                 <div key={v} className="flex items-center gap-2">
-                  <span className="text-xs font-mono flex-1 truncate text-foreground">{v}</span>
+                  <span className="text-xs font-mono flex-1 truncate text-on-surface">{v}</span>
                   <input
                     type="number" min={0.01} step={0.1}
-                    className="w-20 bg-background border border-border rounded-lg px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-20 bg-surface border border-outline-variant rounded-lg px-2 py-1 text-xs text-right focus:outline-none focus:ring-1 focus:ring-primary"
                     value={weights[v] ?? 1}
                     onChange={e => setWeights(prev => ({ ...prev, [v]: Math.max(0.01, Number(e.target.value)) }))}
                   />
-                  <span className="text-xs text-muted-foreground w-10">weight</span>
+                  <span className="text-xs text-on-surface-variant w-10">weight</span>
                 </div>
               ))}
-              <p className="text-[10px] text-muted-foreground/60 pt-1">Higher weight = picked more often</p>
+              <p className="text-[10px] text-on-surface-variant/60 pt-1">Higher weight = picked more often</p>
             </div>
           )}
 
           {/* fixed_per_parent sub-controls */}
           {dist === 'fixed_per_parent' && (
-            <div className="bg-muted/30 rounded-lg p-4 space-y-3 border border-border">
-              <p className="text-xs font-semibold text-muted-foreground">Children per parent</p>
+            <div className="bg-surface-container-high/30 rounded-lg p-4 space-y-3 border border-outline-variant">
+              <p className="text-xs font-semibold text-on-surface-variant">Children per parent</p>
               <div className="flex items-center gap-3">
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Min</label>
+                  <label className="text-xs text-on-surface-variant mb-1 block">Min</label>
                   <input
                     type="number" min={0}
-                    className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full bg-surface border border-outline-variant rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     value={minC}
                     onChange={e => setMinC(Math.max(0, Number(e.target.value)))}
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-muted-foreground mb-1 block">Max</label>
+                  <label className="text-xs text-on-surface-variant mb-1 block">Max</label>
                   <input
                     type="number" min={1}
-                    className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="w-full bg-surface border border-outline-variant rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                     value={maxC}
                     onChange={e => setMaxC(Math.max(1, Number(e.target.value)))}
                   />
@@ -150,7 +150,7 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
                   <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                   <span>
                     Based on parent rows × avg {((minC + maxC) / 2).toFixed(1)} children ≈{' '}
-                    <strong className="text-foreground">{estimate.toLocaleString()} rows</strong> suggested for this table
+                    <strong className="text-on-surface">{estimate.toLocaleString()} rows</strong> suggested for this table
                   </span>
                 </div>
               )}
@@ -159,8 +159,8 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
 
           {/* FK Null Rate */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Null Rate <span className="font-normal normal-case text-muted-foreground/60">({fkNullRate}% of FK values will be null)</span>
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
+              Null Rate <span className="font-normal normal-case text-on-surface-variant/60">({fkNullRate}% of FK values will be null)</span>
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -171,22 +171,22 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
               />
               <input
                 type="number" min={0} max={100}
-                className="w-16 bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-16 bg-surface border border-outline-variant rounded-lg px-2 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-primary"
                 value={fkNullRate}
                 onChange={e => setFkNullRate(Math.min(100, Math.max(0, Number(e.target.value))))}
               />
-              <span className="text-xs text-muted-foreground">%</span>
+              <span className="text-xs text-on-surface-variant">%</span>
             </div>
           </div>
 
           {/* Fixed values */}
           <div>
-            <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Fixed Values <span className="font-normal normal-case text-muted-foreground/60">(comma-separated — restricts pool to this subset)</span>
+            <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1">
+              Fixed Values <span className="font-normal normal-case text-on-surface-variant/60">(comma-separated — restricts pool to this subset)</span>
             </label>
             <textarea
               rows={2}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+              className="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary resize-none"
               placeholder="e.g. 1, 2, 3  or  active, pending"
               value={fixedValues}
               onChange={e => setFixedValues(e.target.value)}
@@ -195,16 +195,16 @@ export function FkConfigModal({ col, allTables, rowCounts = {}, onSave, onClose 
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 px-5 py-4 border-t border-border">
+        <div className="flex gap-2 px-5 py-4 border-t border-outline-variant">
           <button
             onClick={onClose}
-            className="flex-1 py-2 rounded-lg text-sm border border-border hover:bg-muted transition-colors"
+            className="flex-1 py-2 rounded-lg text-sm border border-outline-variant hover:bg-surface-container-high transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex-1 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="flex-1 py-2 rounded-lg text-sm bg-primary text-on-primary-fixed hover:bg-primary/90 transition-colors"
           >
             Save
           </button>

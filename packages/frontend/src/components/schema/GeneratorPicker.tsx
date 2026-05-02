@@ -373,13 +373,13 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="bg-card border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col"
+        className="bg-surface-container border border-outline-variant rounded-xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-outline-variant shrink-0">
           <h3 className="font-semibold text-sm">Data Generator</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -387,7 +387,7 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
         <div className="overflow-y-auto flex-1 min-h-0">
           {/* Type grid */}
           <div className="p-4 pb-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">Type</p>
+            <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2.5">Type</p>
             <div className="grid grid-cols-6 gap-1.5">
               {GENERATORS.map(g => (
                 <button
@@ -398,25 +398,25 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
                     'flex flex-col items-center gap-1 rounded-lg border py-2 px-1 text-center transition-colors',
                     selectedType === g.type
                       ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/40 text-muted-foreground hover:text-foreground',
+                      : 'border-outline-variant hover:border-primary/40 text-on-surface-variant hover:text-on-surface',
                   )}
                 >
                   <span className="text-sm font-mono leading-none">{g.icon}</span>
-                  <span className="text-[11px] font-medium text-foreground">{g.label}</span>
+                  <span className="text-[11px] font-medium text-on-surface">{g.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Tabs: Mapping | Locale */}
-          <div className="flex border-b border-border/60 px-4 gap-4 shrink-0">
+          <div className="flex border-b border-outline-variant/60 px-4 gap-4 shrink-0">
             <button
               onClick={() => setActiveTab('mapping')}
               className={cn(
                 'flex items-center gap-1.5 text-xs pb-2 border-b-2 transition-colors',
                 activeTab === 'mapping'
-                  ? 'border-primary text-foreground font-medium'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
+                  ? 'border-primary text-on-surface font-medium'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface',
               )}
             >
               <Wand2 className="w-3 h-3" /> Faker Mapping
@@ -426,8 +426,8 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
               className={cn(
                 'flex items-center gap-1.5 text-xs pb-2 border-b-2 transition-colors',
                 activeTab === 'locale'
-                  ? 'border-primary text-foreground font-medium'
-                  : 'border-transparent text-muted-foreground hover:text-foreground',
+                  ? 'border-primary text-on-surface font-medium'
+                  : 'border-transparent text-on-surface-variant hover:text-on-surface',
               )}
             >
               <Globe className="w-3 h-3" /> Locale
@@ -441,7 +441,7 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
           {activeTab === 'mapping' && (
             <div className="p-4 space-y-4">
               {!groups ? (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="text-xs text-on-surface-variant text-center py-4">
                   This type has no Faker mapping — values are generated from config settings.
                 </p>
               ) : (
@@ -453,19 +453,19 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
                       'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors w-full',
                       selectedFn === undefined
                         ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-primary/40 text-muted-foreground',
+                        : 'border-outline-variant hover:border-primary/40 text-on-surface-variant',
                     )}
                   >
                     {selectedFn === undefined && <Check className="w-3 h-3 text-primary shrink-0" />}
                     <div>
-                      <span className="font-medium text-foreground">Random / None</span>
-                      <span className="text-muted-foreground ml-2">Use semantic column-name detection or random fallback</span>
+                      <span className="font-medium text-on-surface">Random / None</span>
+                      <span className="text-on-surface-variant ml-2">Use semantic column-name detection or random fallback</span>
                     </div>
                   </button>
 
                   {groups.map(group => (
                     <div key={group.group}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
                         {group.group}
                       </p>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -477,18 +477,18 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
                               'flex flex-col items-start gap-0.5 rounded-lg border p-2 text-left transition-colors text-xs',
                               selectedFn === m.fn
                                 ? 'border-primary bg-primary/10'
-                                : 'border-border hover:border-primary/40 text-muted-foreground hover:text-foreground',
+                                : 'border-outline-variant hover:border-primary/40 text-on-surface-variant hover:text-on-surface',
                               autoFn === m.fn && selectedFn !== m.fn && 'border-primary/25',
                             )}
                           >
                             <div className="flex items-center justify-between w-full gap-1">
-                              <span className="font-medium text-foreground truncate">{m.label}</span>
+                              <span className="font-medium text-on-surface truncate">{m.label}</span>
                               {selectedFn === m.fn && <Check className="w-3 h-3 text-primary shrink-0" />}
                               {autoFn === m.fn && selectedFn !== m.fn && (
                                 <span className="text-primary/60 text-[10px] shrink-0">auto</span>
                               )}
                             </div>
-                            <span className="text-muted-foreground leading-tight line-clamp-1">{m.description}</span>
+                            <span className="text-on-surface-variant leading-tight line-clamp-1">{m.description}</span>
                           </button>
                         ))}
                       </div>
@@ -502,12 +502,12 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
           {/* Tab: Locale */}
           {activeTab === 'locale' && (
             <div className="p-4 space-y-4">
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-on-surface-variant">
                 Locale affects name, address, phone, and other region-specific Faker output.
               </p>
               {LOCALE_GROUPS.map(group => (
                 <div key={group.group}>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">
                     {group.group}
                   </p>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -519,7 +519,7 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
                           'flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-left text-xs transition-colors',
                           selectedLocale === loc.value
                             ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/40 text-muted-foreground hover:text-foreground',
+                            : 'border-outline-variant hover:border-primary/40 text-on-surface-variant hover:text-on-surface',
                         )}
                       >
                         <span>{loc.flag}</span>
@@ -536,8 +536,8 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
 
         {/* Persona Group input — only shown when a persona.* fn is selected */}
         {isPersonaFn && (
-          <div className="px-4 py-3 border-t border-border bg-muted/30 shrink-0">
-            <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1.5">
+          <div className="px-4 py-3 border-t border-outline-variant bg-surface-container-high/30 shrink-0">
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block mb-1.5">
               Persona Group
             </label>
             <input
@@ -545,19 +545,19 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
               value={personaGroup}
               onChange={e => setPersonaGroup(e.target.value)}
               placeholder="e.g. customer, employee, default"
-              className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full bg-surface border border-outline-variant rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            <p className="text-[11px] text-muted-foreground mt-1.5">
+            <p className="text-[11px] text-on-surface-variant mt-1.5">
               All <code className="font-mono">persona.*</code> columns sharing this group will reference the same person per row.
             </p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-border flex items-center justify-between shrink-0">
-          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+        <div className="px-4 py-3 border-t border-outline-variant flex items-center justify-between shrink-0">
+          <div className="text-xs text-on-surface-variant flex items-center gap-1.5">
             <span className="font-mono text-primary">{selectedType}</span>
-            {selectedMappingLabel && <><span>→</span><span className="text-foreground">{selectedMappingLabel}</span></>}
+            {selectedMappingLabel && <><span>→</span><span className="text-on-surface">{selectedMappingLabel}</span></>}
             {selectedLocale !== 'en_US' && (
               <span className="ml-1 text-primary/80">{selectedLocaleOption?.flag} {selectedLocaleOption?.label}</span>
             )}
@@ -568,13 +568,13 @@ export function GeneratorPicker({ current, currentFakerFn, currentLocale, curren
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-1.5 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+              className="px-4 py-1.5 text-sm border border-outline-variant rounded-md hover:bg-surface-container-high transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleApply}
-              className="px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              className="px-4 py-1.5 text-sm bg-primary text-on-primary-fixed rounded-md hover:bg-primary/90 transition-colors"
             >
               Apply
             </button>

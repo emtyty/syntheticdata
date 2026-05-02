@@ -81,14 +81,6 @@ export function ProjectList() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-4 ml-8">
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all duration-300">
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
-            <button className="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-bright rounded-md transition-all duration-300">
-              <span className="material-symbols-outlined">help_outline</span>
-            </button>
-          </div>
         </header>
 
         {/* Scrollable content */}
