@@ -40,5 +40,8 @@ coverage/
 # Claude Code local state
 .claude/
 
+# ZeroCTX (per-project config + tracking DB)
+.zeroctx/
+
 # Local runtime data (SQLite DB, generated job artifacts)
 packages/backend/data/
