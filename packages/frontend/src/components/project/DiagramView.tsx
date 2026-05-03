@@ -13,8 +13,9 @@ import {
 } from '@xyflow/react';
 import type { Connection, Edge, Node, NodeProps } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import dagre from '@dagrejs/dagre';
 import { nanoid } from 'nanoid';
-import { Plus, Maximize2, Trash2, Check, X } from 'lucide-react';
+import { Plus, Maximize2, Trash2, Check, X, LayoutGrid } from 'lucide-react';
 import type { ColumnSchema, DatasetSchema, ColumnDataType, IndexType } from '../../types/index.js';
 import { useProjectStore } from '../../store/projectStore.js';
 
@@ -114,18 +115,60 @@ const nodeTypes = { tableNode: TableNode } as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const COLS = 3;
-const H_GAP = 260;
-const V_GAP = 320;
+// Approximate rendered size of a TableNode for dagre. Header is ~36px, each
+// column row ~24px, plus a few px of padding. Width roughly matches min-w-[190px]
+// plus column-name + type. Disconnected components stack vertically below the
+// main hierarchy; dagre positions them automatically given the rankdir.
+const NODE_WIDTH = 220;
+function nodeHeight(columnCount: number): number {
+  return 40 + Math.max(columnCount, 1) * 24 + 8;
+}
+
+function layoutWithDagre(
+  tables: DatasetSchema[],
+  rankdir: 'TB' | 'LR' = 'LR',
+): Map<string, { x: number; y: number }> {
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir, nodesep: 60, ranksep: 100, marginx: 20, marginy: 20 });
+  g.setDefaultEdgeLabel(() => ({}));
+
+  for (const table of tables) {
+    g.setNode(table.id, { width: NODE_WIDTH, height: nodeHeight(table.columns.length) });
+  }
+  for (const table of tables) {
+    for (const col of table.columns) {
+      if (col.indexType !== 'foreign_key' || !col.generatorConfig.poolRef) continue;
+      const refTableName = col.generatorConfig.poolRef.split('.')[0];
+      const refTable = tables.find((t) => t.name === refTableName);
+      if (!refTable || refTable.id === table.id) continue;
+      g.setEdge(refTable.id, table.id);
+    }
+  }
+
+  dagre.layout(g);
+
+  // dagre returns center-points; React Flow uses top-left, so shift by half size.
+  const positions = new Map<string, { x: number; y: number }>();
+  for (const table of tables) {
+    const n = g.node(table.id);
+    if (!n) continue;
+    positions.set(table.id, {
+      x: n.x - NODE_WIDTH / 2,
+      y: n.y - nodeHeight(table.columns.length) / 2,
+    });
+  }
+  return positions;
+}
 
 function buildNodes(
   tables: DatasetSchema[],
   onTableClick: (tableId: string) => void,
+  positions: Map<string, { x: number; y: number }>,
 ): TableNodeType[] {
-  return tables.map((table, i) => ({
+  return tables.map((table) => ({
     id: table.id,
     type: 'tableNode' as const,
-    position: { x: (i % COLS) * H_GAP, y: Math.floor(i / COLS) * V_GAP },
+    position: positions.get(table.id) ?? { x: 0, y: 0 },
     data: {
       table,
       onTableClick: () => onTableClick(table.id),
@@ -353,17 +396,32 @@ interface FlowProps {
 
 function DiagramFlow({ tables, onTableClick, addTable, updateTable }: FlowProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<TableNodeType>(
-    buildNodes(tables, onTableClick),
+    buildNodes(tables, onTableClick, layoutWithDagre(tables)),
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<DiagramEdge>(buildEdges(tables));
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Rebuild nodes/edges when tables change
+  // Re-layout when the table SET changes (added/removed) but preserve user
+  // drags otherwise. We compare the sorted id list to detect set changes.
+  const tableIdsKey = tables.map((t) => t.id).sort().join('|');
   useEffect(() => {
-    setNodes(buildNodes(tables, onTableClick));
+    setNodes(buildNodes(tables, onTableClick, layoutWithDagre(tables)));
+    setEdges(buildEdges(tables));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tableIdsKey]);
+
+  // Refresh edges whenever FK config changes (without re-laying out positions)
+  useEffect(() => {
     setEdges(buildEdges(tables));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tables]);
+
+  function handleAutoArrange() {
+    const positions = layoutWithDagre(tables);
+    setNodes((nds) =>
+      nds.map((n) => ({ ...n, position: positions.get(n.id) ?? n.position })),
+    );
+  }
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -454,7 +512,15 @@ function DiagramFlow({ tables, onTableClick, addTable, updateTable }: FlowProps)
         </div>
       )}
 
-      <div className="absolute top-3 right-3 z-10">
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <button
+          onClick={handleAutoArrange}
+          title="Re-layout tables by FK hierarchy"
+          className="flex items-center gap-1.5 bg-card border border-border rounded-lg px-3 py-1.5 text-xs font-medium hover:bg-muted transition-colors shadow"
+        >
+          <LayoutGrid className="w-3.5 h-3.5" />
+          Auto-Arrange
+        </button>
         <button
           onClick={() => {
             const btn = document.querySelector<HTMLButtonElement>('.react-flow__controls-fitview');
