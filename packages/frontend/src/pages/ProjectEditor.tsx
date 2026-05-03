@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
@@ -53,7 +53,6 @@ export function ProjectEditor() {
     activeTableId,
     setProject,
     setActiveTableId,
-    setActiveTab,
     updateTable,
     addTable,
     removeTable,
@@ -67,28 +66,6 @@ export function ProjectEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Keep projectStore's activeTab in sync with the URL (for child components that read it)
-  useEffect(() => {
-    setActiveTab(activeTab);
-  }, [activeTab, setActiveTab]);
-
-  // When a child component calls setActiveTab (e.g. SchemaEditor "Go to Generate"),
-  // mirror that to the URL so the browser reflects the change.
-  // Skip on first render: storeTab may carry a stale value from a previously-opened
-  // project, which would redirect the user away from the intended tab.
-  const { activeTab: storeTab } = useProjectStore();
-  const storeTabMounted = useRef(false);
-  useEffect(() => {
-    if (!storeTabMounted.current) {
-      storeTabMounted.current = true;
-      return;
-    }
-    if (storeTab !== activeTab) {
-      navigateTab(storeTab);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeTab]);
 
   // Load project when projectId changes
   useEffect(() => {

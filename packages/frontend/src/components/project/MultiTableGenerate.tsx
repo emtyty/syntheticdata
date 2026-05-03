@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Zap, RefreshCw, ArrowRight, Info, X, StopCircle, FlaskConical } from 'lucide-react';
 import {
   startProjectGeneration,
@@ -21,7 +22,9 @@ const PRESETS = [
 ];
 
 export function MultiTableGenerate() {
-  const { project, jobResults, setJobResult, setActiveTab, setTableRowCounts } = useProjectStore();
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
+  const { project, jobResults, setJobResult, setTableRowCounts } = useProjectStore();
   const tables = project?.tables ?? [];
 
   const [tableConfigs, setTableConfigs] = useState<TableConfig[]>([]);
@@ -359,7 +362,7 @@ export function MultiTableGenerate() {
 
           {isDone && !running && (
             <button
-              onClick={() => setActiveTab('export')}
+              onClick={() => projectId && navigate(`/projects/${projectId}/export`)}
               className="flex items-center gap-2 border border-border px-4 py-2 rounded-lg text-sm hover:bg-muted transition-colors"
             >
               Go to Export

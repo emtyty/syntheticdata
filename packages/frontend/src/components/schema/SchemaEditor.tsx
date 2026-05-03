@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Trash2, ChevronRight, Settings2, ArrowRight, SlidersHorizontal, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore.js';
 import { useProjectStore } from '../../store/projectStore.js';
@@ -65,8 +66,10 @@ function ResizableTh({ colKey, width, startResize, children }: ResizableThProps)
 }
 
 export function SchemaEditor() {
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
   const { schema, schemaServerSaved, updateColumn, addColumn, removeColumn, setSchema, setStep, addRule, removeRule } = useAppStore();
-  const { project, tableRowCounts, setActiveTab } = useProjectStore();
+  const { project, tableRowCounts } = useProjectStore();
   const { widths, startResize } = useColumnWidths();
   // All tables from the project (for cross-table FK pool selection)
   const allProjectTables = project?.tables ?? [];
@@ -91,10 +94,10 @@ export function SchemaEditor() {
     setSaving(true);
     setError(null);
     try {
-      if (isProjectTable) {
+      if (isProjectTable && projectId) {
         // In project context: the table is already synced to the project store
         // via the useEffect in ProjectEditor. Just navigate to the Generate tab.
-        setActiveTab('generate');
+        navigate(`/projects/${projectId}/generate`);
       } else {
         const payload = { name: schema.name, columns: schema.columns, rules: schema.rules, sourceType: schema.sourceType };
         const saved = schemaServerSaved

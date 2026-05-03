@@ -1,10 +1,9 @@
 import { create } from 'zustand';
-import type { DatasetSchema, GeneratedRow, Project, ProjectTab } from '../types/index.js';
+import type { DatasetSchema, GeneratedRow, Project } from '../types/index.js';
 
 interface ProjectStore {
   project: Project | null;
   activeTableId: string | null;
-  activeTab: ProjectTab;
   jobId: string | null;
   jobSeed: number | null;
   jobResults: Record<string, GeneratedRow[]> | null;
@@ -13,7 +12,6 @@ interface ProjectStore {
 
   setProject: (p: Project) => void;
   setActiveTableId: (id: string | null) => void;
-  setActiveTab: (tab: ProjectTab) => void;
   updateTable: (table: DatasetSchema) => void;
   addTable: (table: DatasetSchema) => void;
   removeTable: (tableId: string) => void;
@@ -25,7 +23,6 @@ interface ProjectStore {
 export const useProjectStore = create<ProjectStore>((set) => ({
   project: null,
   activeTableId: null,
-  activeTab: 'tables',
   jobId: null,
   jobSeed: null,
   jobResults: null,
@@ -33,7 +30,6 @@ export const useProjectStore = create<ProjectStore>((set) => ({
 
   setProject: (project) => set({ project }),
   setActiveTableId: (activeTableId) => set({ activeTableId }),
-  setActiveTab: (activeTab) => set({ activeTab }),
 
   updateTable: (table) =>
     set((s) => ({
@@ -66,7 +62,6 @@ export const useProjectStore = create<ProjectStore>((set) => ({
     set({
       project: null,
       activeTableId: null,
-      activeTab: 'tables',
       jobId: null,
       jobSeed: null,
       jobResults: null,
