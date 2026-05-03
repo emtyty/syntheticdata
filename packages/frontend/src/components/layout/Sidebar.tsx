@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/', icon: 'folder_open', label: 'Projects' },
   { href: '/single', icon: 'table_chart', label: 'Single Table' },
   { href: '/profile', icon: 'settings', label: 'Settings' },
+  { href: '/help', icon: 'help_outline', label: 'Help' },
 ];
 
 export function Sidebar({ onNewProject }: SidebarProps) {
