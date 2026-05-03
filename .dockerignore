@@ -1,0 +1,40 @@
+# Build artifacts and deps — rebuilt inside the image
+node_modules
+**/node_modules
+**/dist
+**/build
+**/*.tsbuildinfo
+
+# Local runtime data — never copy into the image
+packages/backend/data
+**/*.db
+**/*.db-wal
+**/*.db-shm
+
+# VCS / editor / OS
+.git
+.gitignore
+.gitattributes
+.github
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Environment files — supplied at runtime via env_file / -e
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs
+
+# Claude / tooling state
+.claude
+.zeroctx
+
+# Docs (kept small — image doesn't need them)
+README.md
+LICENSE
+docs
