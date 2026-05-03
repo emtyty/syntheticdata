@@ -42,24 +42,23 @@ export async function buildSqliteDb(
       if (!filePath || !fs.existsSync(filePath)) continue;
 
       // ── Peek at the first row to learn column names + types ──────────────
-      let columns: string[] | null = null;
+      let columns: string[] = [];
       let colTypes: string[] = [];
-      let firstRow: Record<string, unknown> | null = null;
 
       await new Promise<void>((resolve, reject) => {
         const rl = readline.createInterface({ input: fs.createReadStream(filePath), crlfDelay: Infinity });
         rl.on('line', (line) => {
           if (!line.trim()) return;
-          firstRow = JSON.parse(line) as Record<string, unknown>;
+          const firstRow = JSON.parse(line) as Record<string, unknown>;
           columns = Object.keys(firstRow);
-          colTypes = columns.map(c => inferSqliteType(firstRow![c]));
+          colTypes = columns.map(c => inferSqliteType(firstRow[c]));
           rl.close();
         });
         rl.on('close', resolve);
         rl.on('error', reject);
       });
 
-      if (!columns || columns.length === 0) continue;
+      if (columns.length === 0) continue;
 
       // ── Create table ─────────────────────────────────────────────────────
       const tableName = table.name.replace(/[^a-zA-Z0-9_]/g, '_');
@@ -83,7 +82,7 @@ export async function buildSqliteDb(
         rl.on('line', (line) => {
           if (!line.trim()) return;
           const row = JSON.parse(line) as Record<string, unknown>;
-          batch.push(columns!.map(c => {
+          batch.push(columns.map(c => {
             const v = row[c];
             if (v === null || v === undefined) return null;
             if (typeof v === 'boolean') return v ? 1 : 0;
