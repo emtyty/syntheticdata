@@ -54,9 +54,16 @@ export function Help() {
             <span className="material-symbols-outlined text-primary text-[20px]">help_outline</span>
             <span className="text-[10px] font-label uppercase tracking-widest text-on-surface">Help & Docs</span>
           </div>
-          <span className="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">
-            Reading time: ~10 min
-          </span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 text-[10px] font-label uppercase tracking-widest">
+              <span className="text-primary font-bold">EN</span>
+              <span className="text-on-surface-variant/40">|</span>
+              <Link to="/help/vi" className="text-on-surface-variant hover:text-primary transition-colors">VI</Link>
+            </div>
+            <span className="font-label text-[10px] uppercase tracking-tighter text-on-surface-variant">
+              Reading time: ~10 min
+            </span>
+          </div>
         </header>
 
         {/* Two-column body: TOC + content */}
