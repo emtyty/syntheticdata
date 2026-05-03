@@ -2,8 +2,6 @@
 
 A full-stack web application for generating realistic synthetic data from SQL DDL, Prisma schemas, or CSV uploads. Define your tables, configure column generators, and export production-like datasets in seconds — no LLM, no API key, runs entirely offline.
 
-![Node](https://img.shields.io/badge/node-18%2B-green)
-
 ## Features
 
 ### Schema & Import
@@ -26,6 +24,39 @@ A full-stack web application for generating realistic synthetic data from SQL DD
 - **Project management** — Search, rename, duplicate, delete with confirmation
 - **Light / dark theme** — Full Neon Architect palette in dark mode, Material-light variant in light mode; persists across reloads
 - **Persistence** — Schemas, projects, and jobs stored in embedded SQLite (WAL mode)
+
+## Use Cases
+
+### Test data & QA
+- **Pre-built test fixtures** — generate a `.db` or `.sql` per scenario (empty / small / large / edge-case), commit it, tests open read-only.
+- **Integration / E2E seed data** — multi-table project with FKs intact, exported as SQL `INSERT`s and replayed into the test DB.
+- **Migration testing** — generate a "before" dataset, run the migration, verify the shape afterwards.
+- **Bug reproduction** — share `seed=1234, rows=10k, schema=...` so a teammate gets bit-identical data.
+
+### Performance & load
+- **Load / stress testing** — push 1M-10M rows into a target DB to benchmark queries, indexes, EXPLAIN plans.
+- **Index tuning** — realistic cardinalities (uniform / weighted / fixed-per-parent FKs) catch bad query plans that `generate_series` won't.
+- **Pagination / virtualization stress** — enough rows to exercise virtual lists, infinite-scroll, cursor pagination.
+
+### Demo & sales
+- **Sales demos / customer-facing previews** — populate a fresh tenant with on-brand data (e-commerce / SaaS / healthcare templates).
+- **Product screenshots & marketing assets** — coherent personas (`persona.fullName` + matching `persona.email` / `persona.city`) so demo screens look real.
+- **Onboarding / trial accounts** — first-login population so the dashboard isn't empty.
+
+### Development
+- **Local dev seed data** — match production's shape without copying production data.
+- **Frontend-only dev** — export to JSON, drop into a `db.json` for `json-server` or MSW.
+- **Schema prototyping** — paste candidate Prisma/SQL DDL, generate a sample, sanity-check before committing the migration.
+- **Anonymizing prod schemas** — keep production's structure (via SQL DDL import), regenerate values, share without PII.
+
+### Compliance & training
+- **GDPR / HIPAA-safe sample data** — no real values, safe to share externally.
+- **Tutorials & training datasets** — predictable seeded data for screencasts, blog posts, course material.
+
+### Data pipeline / ETL
+- **Pipeline validation** — JSONL/CSV with edge cases (nulls, weighted enums, wide ranges) fed into the pipeline.
+- **Reproducible benchmarks** — same seed + same schema = byte-identical dataset for comparing query engines.
+- **CSV → SQL bridge** — upload a CSV, infer schema, export `CREATE TABLE` + `INSERT` to lift a spreadsheet into Postgres.
 
 ## Tech Stack
 
