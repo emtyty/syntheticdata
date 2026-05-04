@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Loader2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Loader2, Upload } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { nanoid } from 'nanoid';
 import {
@@ -14,6 +14,8 @@ import { Sidebar } from '../components/layout/Sidebar.js';
 
 type ModalMode = 'manual' | 'prisma' | 'sql' | 'csv' | 'template' | null;
 
+const PAGE_SIZE = 25;
+
 export function ProjectList() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -21,6 +23,7 @@ export function ProjectList() {
   const [error, setError] = useState<string | null>(null);
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     listProjects()
@@ -29,8 +32,26 @@ export function ProjectList() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProjects = useMemo(
+    () => projects.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [projects, searchQuery]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredProjects.length / PAGE_SIZE));
+
+  // Clamp page when filter results shrink (e.g. search narrows, project deleted)
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+
+  // Reset to first page when the search query changes
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  const pagedProjects = useMemo(
+    () => filteredProjects.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredProjects, page]
   );
 
   async function handleDelete(id: string) {
@@ -276,11 +297,11 @@ export function ProjectList() {
                   )}
                 </div>
               ) : (
-                filteredProjects.map((project, i) => (
+                pagedProjects.map((project, i) => (
                   <ProjectRow
                     key={project.id}
                     project={project}
-                    isLast={i === filteredProjects.length - 1}
+                    isLast={i === pagedProjects.length - 1}
                     onOpen={() => navigate(`/projects/${project.id}/tables`)}
                     onDelete={() => handleDelete(project.id)}
                     onDuplicate={() => handleDuplicate(project.id)}
@@ -289,6 +310,35 @@ export function ProjectList() {
                 ))
               )}
             </div>
+
+            {totalPages > 1 && !loading && (
+              <div className="flex items-center justify-between mt-5 px-1">
+                <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
+                  Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filteredProjects.length)} of {filteredProjects.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-surface-container border border-outline-variant/20 rounded font-label text-[10px] uppercase tracking-widest text-on-surface hover:bg-surface-bright disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    Prev
+                  </button>
+                  <span className="font-label text-[10px] uppercase tracking-widest text-on-surface-variant">
+                    Page {page} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-surface-container border border-outline-variant/20 rounded font-label text-[10px] uppercase tracking-widest text-on-surface hover:bg-surface-bright disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         </div>
       </main>
