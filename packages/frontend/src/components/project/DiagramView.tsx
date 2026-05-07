@@ -466,7 +466,7 @@ function AddTableForm({ onAdd, onCancel }: AddTableFormProps) {
         indexType: c.indexType,
         notNull: c.indexType === 'primary_key',
         generatorConfig: { locale: 'en' },
-        poolName: c.indexType === 'primary_key' ? c.name.trim() : undefined,
+        poolName: c.indexType === 'primary_key' ? `${tableName}.${c.name.trim()}` : undefined,
       }));
 
     const table: DatasetSchema = {

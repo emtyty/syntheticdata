@@ -124,6 +124,18 @@ export async function generateProject(
   ) => Promise<void>,
   cancellationToken?: { cancelled: boolean },
 ): Promise<void> {
+  // Heal PK poolNames that were saved without the "TableName." prefix
+  // (older projects created via the diagram's Add-Table form). FK poolRefs
+  // and the dropdown UI both use the qualified form.
+  tables = tables.map(t => ({
+    ...t,
+    columns: t.columns.map(c =>
+      c.indexType === 'primary_key' && c.poolName && !c.poolName.includes('.')
+        ? { ...c, poolName: `${t.name}.${c.poolName}` }
+        : c,
+    ),
+  }));
+
   validatePoolRefs(tables);
 
   const levels = topoSortTablesWithLevels(tables);
