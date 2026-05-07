@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { projectStore, jobStore } from '../store/session.store.js';
 import { parsePrismaSchema } from '../services/prisma-parser.service.js';
 import { parseSQLMultiple } from '../services/sql-parser.service.js';
+import { parseErJson } from '../services/er-parser.service.js';
 import { generateProject } from '../services/multi-generate.service.js';
 import { appendJsonlChunk, readJsonlRows, jobTempPath, getTempDir } from '../services/tempfile.service.js';
 import { buildSqliteDb } from '../services/sqlite-export.service.js';
@@ -66,7 +67,7 @@ const RuleZ = z.object({
 const TableZ = z.object({
   id: z.string(), name: z.string().min(1),
   columns: z.array(ColumnZ), rules: z.array(RuleZ),
-  sourceType: z.enum(['upload','manual','sql','prisma']),
+  sourceType: z.enum(['upload','manual','sql','prisma','er']),
   createdAt: z.string(), updatedAt: z.string(),
 });
 
@@ -220,6 +221,20 @@ export async function projectRoutes(app: FastifyInstance) {
       reply.code(201).send({ ok: true, data: project, warnings });
     } catch (e) {
       reply.code(400).send({ ok: false, error: `SQL parse error: ${(e as Error).message}` });
+    }
+  });
+
+  // ── Import: ER JSON schema (multi-table) ───────────────────────────────────
+
+  app.post('/projects/infer/er', async (req, reply) => {
+    const parsed = z.object({ source: z.string().min(1), name: z.string().optional() }).safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.message });
+    try {
+      const { project, warnings } = parseErJson(parsed.data.source, parsed.data.name);
+      projectStore.set(project);
+      reply.code(201).send({ ok: true, data: project, warnings });
+    } catch (e) {
+      reply.code(400).send({ ok: false, error: `ER parse error: ${(e as Error).message}` });
     }
   });
 

@@ -5,14 +5,14 @@ import { useDropzone } from 'react-dropzone';
 import { nanoid } from 'nanoid';
 import {
   listProjects, createProject, deleteProject, inferFromPrisma, inferProjectFromSql,
-  inferFromCsv, duplicateProject, updateProject,
+  inferProjectFromEr, inferFromCsv, duplicateProject, updateProject,
   listTemplates, createFromTemplate,
 } from '../api/client.js';
 import type { TemplateSummary } from '../api/client.js';
 import type { Project } from '../types/index.js';
 import { Sidebar } from '../components/layout/Sidebar.js';
 
-type ModalMode = 'manual' | 'prisma' | 'sql' | 'csv' | 'template' | null;
+type ModalMode = 'manual' | 'prisma' | 'sql' | 'csv' | 'er' | 'template' | null;
 
 const PAGE_SIZE = 25;
 
@@ -145,7 +145,7 @@ export function ProjectList() {
               <h2 className="font-headline text-2xl font-bold">Quick Import</h2>
               <div className="h-px flex-1 bg-gradient-to-r from-outline-variant/30 to-transparent" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {/* Prisma */}
               <button
                 onClick={() => setModalMode('prisma')}
@@ -210,6 +210,29 @@ export function ProjectList() {
                   </p>
                   <div className="flex items-center gap-2 text-tertiary font-label text-[11px] font-bold tracking-widest uppercase">
                     Upload File
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </div>
+                </div>
+              </button>
+
+              {/* ER JSON */}
+              <button
+                onClick={() => setModalMode('er')}
+                className="group relative p-8 bg-surface-container rounded-xl border border-outline-variant/10 hover:border-primary/40 transition-all duration-300 text-left overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                  <span className="material-symbols-outlined text-[100px]">data_object</span>
+                </div>
+                <div className="relative z-10">
+                  <div className="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center mb-5 border border-outline-variant/20">
+                    <span className="material-symbols-outlined text-primary">data_object</span>
+                  </div>
+                  <h3 className="text-xl font-headline font-bold mb-2">ER JSON</h3>
+                  <p className="text-on-surface-variant text-sm mb-5 max-w-[280px]">
+                    Upload an ER schema JSON describing tables, columns, and relationships.
+                  </p>
+                  <div className="flex items-center gap-2 text-primary font-label text-[11px] font-bold tracking-widest uppercase">
+                    Upload ER JSON
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </div>
                 </div>
@@ -501,7 +524,7 @@ function ProjectRow({ project, isLast, onOpen, onDelete, onDuplicate, onRename }
 // ─── Import Modal ─────────────────────────────────────────────────────────────
 
 interface ModalProps {
-  mode: 'manual' | 'prisma' | 'sql' | 'csv';
+  mode: 'manual' | 'prisma' | 'sql' | 'csv' | 'er';
   onClose: () => void;
   onCreated: (project: Project) => void;
 }
@@ -510,19 +533,34 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
   const [projectName, setProjectName] = useState('');
   const [source, setSource] = useState('');
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback((files: File[]) => {
     const file = files[0];
     if (!file) return;
-    setCsvFile(file);
-    if (!projectName) setProjectName(file.name.replace(/\.csv$/i, ''));
-  }, [projectName]);
+    if (mode === 'er') {
+      // Read JSON file contents into the textarea so the user can review/edit
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSource(typeof reader.result === 'string' ? reader.result : '');
+        if (!projectName) setProjectName(file.name.replace(/\.json$/i, ''));
+      };
+      reader.readAsText(file);
+    } else {
+      setCsvFile(file);
+      if (!projectName) setProjectName(file.name.replace(/\.csv$/i, ''));
+    }
+  }, [projectName, mode]);
+
+  const dropzoneAccept: Record<string, string[]> = mode === 'er'
+    ? { 'application/json': ['.json'], 'text/plain': ['.json', '.txt'] }
+    : { 'text/csv': ['.csv'], 'text/plain': ['.txt'] };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'text/csv': ['.csv'], 'text/plain': ['.txt'] },
+    accept: dropzoneAccept,
     maxFiles: 1,
     disabled: loading,
   });
@@ -531,18 +569,22 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
     mode === 'manual' ? 'New Project' :
     mode === 'prisma' ? 'Import Prisma Schema' :
     mode === 'sql' ? 'Import SQL DDL' :
+    mode === 'er' ? 'Import ER JSON' :
     'Import CSV';
 
   const subtitle =
     mode === 'manual' ? 'Create empty project' :
     mode === 'csv' ? 'Infer schema from CSV file' :
+    mode === 'er' ? 'Parse ER schema JSON & initialize tables' :
     'Parse schema & initialize tables';
 
   async function handleSubmit() {
     if (!projectName.trim()) { setError('Project name is required'); return; }
     if (mode === 'csv' && !csvFile) { setError('Please select a CSV file'); return; }
+    if (mode === 'er' && !source.trim()) { setError('Please paste or upload an ER JSON document'); return; }
     setLoading(true);
     setError(null);
+    setWarnings([]);
     try {
       let project: Project;
       if (mode === 'manual') {
@@ -551,6 +593,10 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
         project = await inferFromPrisma(source, projectName.trim());
       } else if (mode === 'sql') {
         project = await inferProjectFromSql(source, projectName.trim());
+      } else if (mode === 'er') {
+        const result = await inferProjectFromEr(source, projectName.trim());
+        project = result.project;
+        if (result.warnings.length > 0) setWarnings(result.warnings);
       } else {
         // CSV: infer single-table schema, wrap in a project
         const result = await inferFromCsv(csvFile!);
@@ -630,6 +676,51 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
             </div>
           )}
 
+          {mode === 'er' && (
+            <div className="space-y-3">
+              <div
+                {...getRootProps()}
+                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                  isDragActive
+                    ? 'border-tertiary bg-tertiary/5'
+                    : source
+                      ? 'border-primary/50 bg-primary/5'
+                      : 'border-outline-variant/40 hover:border-primary/50'
+                } ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+              >
+                <input {...getInputProps()} />
+                {isDragActive ? (
+                  <p className="text-tertiary font-label text-[11px] uppercase tracking-widest">Drop JSON here</p>
+                ) : (
+                  <p className="text-[11px] font-label text-on-surface-variant uppercase tracking-widest">
+                    Drag & drop a .json file — or paste the contents below
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
+                  ER Schema JSON
+                </label>
+                <textarea
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary resize-none text-on-surface placeholder:text-on-surface-variant/50"
+                  placeholder={'{\n  "database": "MyDB",\n  "tables": {\n    "Users": {\n      "columns": {\n        "Id": { "type": "uuid", "nullable": false, "is_primary_key": true }\n      },\n      "primary_key": ["Id"]\n    }\n  },\n  "relationships": []\n}'}
+                  rows={10}
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {warnings.length > 0 && (
+            <div className="bg-tertiary/10 border border-tertiary/30 rounded-lg px-3 py-2 text-xs text-on-surface space-y-1 max-h-40 overflow-auto">
+              <p className="font-label uppercase tracking-widest text-[10px] text-tertiary mb-1">
+                Parser warnings
+              </p>
+              {warnings.map((w, i) => <p key={i}>• {w}</p>)}
+            </div>
+          )}
+
           {mode === 'csv' && (
             <div>
               <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
@@ -680,7 +771,7 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={loading || !projectName.trim() || (mode === 'csv' && !csvFile)}
+            disabled={loading || !projectName.trim() || (mode === 'csv' && !csvFile) || (mode === 'er' && !source.trim())}
             className="flex items-center gap-2 bg-primary text-on-primary-fixed px-5 py-2.5 rounded-lg text-sm font-bold hover:brightness-110 disabled:opacity-50 transition-all font-headline"
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

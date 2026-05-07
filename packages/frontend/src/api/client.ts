@@ -124,6 +124,14 @@ export async function inferProjectFromSql(sql: string, name?: string): Promise<P
   return data.data;
 }
 
+export async function inferProjectFromEr(source: string, name?: string): Promise<{ project: Project; warnings: string[] }> {
+  const { data } = await api.post<{ ok: true; data: Project; warnings?: string[] }>(
+    '/projects/infer/er',
+    { source, name },
+  );
+  return { project: data.data, warnings: data.warnings ?? [] };
+}
+
 export async function startProjectGeneration(
   projectId: string,
   tableConfigs: TableRowConfig[],

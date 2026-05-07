@@ -113,7 +113,7 @@ export interface ConditionalRule {
 
 // ─── Dataset Schema ───────────────────────────────────────────────────────────
 
-export type SourceType = 'upload' | 'manual' | 'sql' | 'prisma';
+export type SourceType = 'upload' | 'manual' | 'sql' | 'prisma' | 'er';
 
 export interface DatasetSchema {
   id: string;

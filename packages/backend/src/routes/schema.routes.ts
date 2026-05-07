@@ -61,7 +61,7 @@ const DatasetSchemaZ = z.object({
   name: z.string().min(1),
   columns: z.array(ColumnSchemaZ),
   rules: z.array(ConditionalRuleZ),
-  sourceType: z.enum(['upload','manual','sql','prisma']),
+  sourceType: z.enum(['upload','manual','sql','prisma','er']),
 });
 
 function buildPoolNames(columns: ColumnSchema[]): ColumnSchema[] {
