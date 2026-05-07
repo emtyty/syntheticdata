@@ -537,26 +537,32 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Modes that load file contents into the textarea (vs CSV which keeps the File object)
+  const isTextSource = mode === 'prisma' || mode === 'sql' || mode === 'er';
+
   const onDrop = useCallback((files: File[]) => {
     const file = files[0];
     if (!file) return;
-    if (mode === 'er') {
-      // Read JSON file contents into the textarea so the user can review/edit
+    if (isTextSource) {
       const reader = new FileReader();
       reader.onload = () => {
         setSource(typeof reader.result === 'string' ? reader.result : '');
-        if (!projectName) setProjectName(file.name.replace(/\.json$/i, ''));
+        if (!projectName) {
+          setProjectName(file.name.replace(/\.(json|prisma|sql|txt)$/i, ''));
+        }
       };
       reader.readAsText(file);
     } else {
       setCsvFile(file);
       if (!projectName) setProjectName(file.name.replace(/\.csv$/i, ''));
     }
-  }, [projectName, mode]);
+  }, [projectName, isTextSource]);
 
-  const dropzoneAccept: Record<string, string[]> = mode === 'er'
-    ? { 'application/json': ['.json'], 'text/plain': ['.json', '.txt'] }
-    : { 'text/csv': ['.csv'], 'text/plain': ['.txt'] };
+  const dropzoneAccept: Record<string, string[]> =
+    mode === 'er'     ? { 'application/json': ['.json'], 'text/plain': ['.json', '.txt'] } :
+    mode === 'prisma' ? { 'text/plain': ['.prisma', '.txt'] } :
+    mode === 'sql'    ? { 'application/sql': ['.sql'], 'text/plain': ['.sql', '.txt'] } :
+                        { 'text/csv': ['.csv'], 'text/plain': ['.txt'] };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -657,60 +663,67 @@ function ImportModal({ mode, onClose, onCreated }: ModalProps) {
             />
           </div>
 
-          {(mode === 'prisma' || mode === 'sql') && (
-            <div>
-              <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
-                {mode === 'prisma' ? 'Prisma Schema' : 'SQL DDL'}
-              </label>
-              <textarea
-                className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2.5 text-sm font-label focus:outline-none focus:ring-1 focus:ring-primary resize-none text-on-surface placeholder:text-on-surface-variant/50"
-                placeholder={
-                  mode === 'prisma'
-                    ? 'Paste your .prisma schema here...'
-                    : 'Paste your CREATE TABLE SQL here...'
-                }
-                rows={10}
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-              />
-            </div>
-          )}
+          {isTextSource && (() => {
+            const config = {
+              prisma: {
+                label:        'Prisma Schema',
+                fileHint:     'Drag & drop a .prisma file — or paste the contents below',
+                dropMsg:      'Drop Prisma schema here',
+                placeholder:  'Paste your .prisma schema here...',
+                textareaCls:  'text-sm font-label',
+              },
+              sql: {
+                label:        'SQL DDL',
+                fileHint:     'Drag & drop a .sql file — or paste the contents below',
+                dropMsg:      'Drop SQL file here',
+                placeholder:  'Paste your CREATE TABLE SQL here...',
+                textareaCls:  'text-sm font-label',
+              },
+              er: {
+                label:        'ER Schema JSON',
+                fileHint:     'Drag & drop a .json file — or paste the contents below',
+                dropMsg:      'Drop JSON here',
+                placeholder:  '{\n  "database": "MyDB",\n  "tables": {\n    "Users": {\n      "columns": {\n        "Id": { "type": "uuid", "nullable": false, "is_primary_key": true }\n      },\n      "primary_key": ["Id"]\n    }\n  },\n  "relationships": []\n}',
+                textareaCls:  'text-xs font-mono',
+              },
+            }[mode as 'prisma' | 'sql' | 'er'];
 
-          {mode === 'er' && (
-            <div className="space-y-3">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                  isDragActive
-                    ? 'border-tertiary bg-tertiary/5'
-                    : source
-                      ? 'border-primary/50 bg-primary/5'
-                      : 'border-outline-variant/40 hover:border-primary/50'
-                } ${loading ? 'opacity-50 pointer-events-none' : ''}`}
-              >
-                <input {...getInputProps()} />
-                {isDragActive ? (
-                  <p className="text-tertiary font-label text-[11px] uppercase tracking-widest">Drop JSON here</p>
-                ) : (
-                  <p className="text-[11px] font-label text-on-surface-variant uppercase tracking-widest">
-                    Drag & drop a .json file — or paste the contents below
-                  </p>
-                )}
+            return (
+              <div className="space-y-3">
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                    isDragActive
+                      ? 'border-tertiary bg-tertiary/5'
+                      : source
+                        ? 'border-primary/50 bg-primary/5'
+                        : 'border-outline-variant/40 hover:border-primary/50'
+                  } ${loading ? 'opacity-50 pointer-events-none' : ''}`}
+                >
+                  <input {...getInputProps()} />
+                  {isDragActive ? (
+                    <p className="text-tertiary font-label text-[11px] uppercase tracking-widest">{config.dropMsg}</p>
+                  ) : (
+                    <p className="text-[11px] font-label text-on-surface-variant uppercase tracking-widest">
+                      {config.fileHint}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
+                    {config.label}
+                  </label>
+                  <textarea
+                    className={`w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2.5 ${config.textareaCls} focus:outline-none focus:ring-1 focus:ring-primary resize-none text-on-surface placeholder:text-on-surface-variant/50`}
+                    placeholder={config.placeholder}
+                    rows={10}
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
-                  ER Schema JSON
-                </label>
-                <textarea
-                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary resize-none text-on-surface placeholder:text-on-surface-variant/50"
-                  placeholder={'{\n  "database": "MyDB",\n  "tables": {\n    "Users": {\n      "columns": {\n        "Id": { "type": "uuid", "nullable": false, "is_primary_key": true }\n      },\n      "primary_key": ["Id"]\n    }\n  },\n  "relationships": []\n}'}
-                  rows={10}
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
+            );
+          })()}
 
           {warnings.length > 0 && (
             <div className="bg-tertiary/10 border border-tertiary/30 rounded-lg px-3 py-2 text-xs text-on-surface space-y-1 max-h-40 overflow-auto">
