@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { nanoid } from 'nanoid';
 import fs from 'fs';
 import Database from 'better-sqlite3';
-import { projectStore, jobStore } from '../store/session.store.js';
+import { projectStore, jobStore, groupStore } from '../store/session.store.js';
 import { parsePrismaSchema } from '../services/prisma-parser.service.js';
 import { parseSQLMultiple } from '../services/sql-parser.service.js';
 import { parseErJson } from '../services/er-parser.service.js';
@@ -74,7 +74,17 @@ const TableZ = z.object({
 const ProjectBodyZ = z.object({
   name: z.string().min(1),
   tables: z.array(TableZ),
+  groupId: z.string().nullable().optional(),
 });
+
+function validateGroupId(groupId: string | null | undefined, reply: FastifyReply): boolean {
+  if (groupId == null) return true;
+  if (!groupStore.get(groupId)) {
+    reply.code(400).send({ ok: false, error: `Unknown groupId: ${groupId}` });
+    return false;
+  }
+  return true;
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -125,11 +135,13 @@ export async function projectRoutes(app: FastifyInstance) {
   app.post('/projects', async (req, reply) => {
     const parsed = ProjectBodyZ.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.message });
+    if (!validateGroupId(parsed.data.groupId, reply)) return;
     const now = new Date().toISOString();
     const project: Project = {
       id: nanoid(),
       name: parsed.data.name,
       tables: sanitizeTableIds(parsed.data.tables as DatasetSchema[]),
+      groupId: parsed.data.groupId ?? null,
       createdAt: now,
       updatedAt: now,
     };
@@ -144,10 +156,12 @@ export async function projectRoutes(app: FastifyInstance) {
     if (!existing) return;
     const parsed = ProjectBodyZ.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ ok: false, error: parsed.error.message });
+    if (!validateGroupId(parsed.data.groupId, reply)) return;
     const updated: Project = {
       ...existing,
       name: parsed.data.name,
       tables: sanitizeTableIds(parsed.data.tables as DatasetSchema[], existing.tables),
+      groupId: parsed.data.groupId === undefined ? existing.groupId ?? null : parsed.data.groupId,
       updatedAt: new Date().toISOString(),
     };
     projectStore.set(updated);

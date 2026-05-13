@@ -73,9 +73,20 @@ export interface Project {
   id: string;
   name: string;
   tables: DatasetSchema[];
+  groupId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Group {
+  id: string;
+  name: string;
+  icon: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type GroupWithCount = Group & { projectCount: number };
 
 export interface TableRowConfig {
   tableId: string;
