@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { schemaStore, jobStore, projectStore, groupStore } from '../store/session.store.js';
 import { parseSQL } from '../services/sql-parser.service.js';
 import { parseCsharpEf } from '../services/csharp-ef-parser.service.js';
+import { inferFkCandidates } from '../services/fk-inference.service.js';
 import { generateProject } from '../services/multi-generate.service.js';
 import { generateRowsChunked, createStreamingContext } from '../services/streaming-generator.service.js';
 import { applyRules } from '../services/rule-engine.service.js';
@@ -466,6 +467,12 @@ function buildMcpServer(): McpServer {
         const { project, warnings } = parseCsharpEf(files, name);
         if (groupId != null) project.groupId = groupId;
         projectStore.set(project);
+        // EF convention-based FKs often slip through ([ForeignKey]-less columns
+        // named UserId etc). Run inference on the parsed tables and surface
+        // any extra candidates the EF parser didn't materialise.
+        const fkCandidates = inferFkCandidates(
+          project.tables.map(t => ({ tableName: t.name, columns: t.columns })),
+        );
         return {
           content: [{
             type: 'text' as const,
@@ -475,6 +482,7 @@ function buildMcpServer(): McpServer {
               tableCount: project.tables.length,
               groupId: project.groupId ?? null,
               warnings,
+              ...(fkCandidates.length > 0 ? { fkCandidates } : {}),
             }, null, 2),
           }],
         };

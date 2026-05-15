@@ -78,6 +78,16 @@ export interface Project {
   updatedAt: string;
 }
 
+export interface FkCandidate {
+  fromTable: string;
+  fromColumn: string;
+  toTable: string;
+  toColumn: string;
+  confidence: number;
+  reasons: string[];
+  selfReference?: boolean;
+}
+
 export interface Group {
   id: string;
   name: string;

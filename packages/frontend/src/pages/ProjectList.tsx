@@ -5,12 +5,13 @@ import { useDropzone } from 'react-dropzone';
 import { nanoid } from 'nanoid';
 import {
   listProjects, createProject, deleteProject, inferFromPrisma, inferProjectFromSql,
+  previewProjectFromSql,
   inferProjectFromEr, inferFromCsv, duplicateProject, updateProject, moveProjectToGroup,
   listTemplates, createFromTemplate,
   listGroups, createGroup, updateGroup, deleteGroup,
 } from '../api/client.js';
 import type { TemplateSummary } from '../api/client.js';
-import type { Project, GroupWithCount } from '../types/index.js';
+import type { Project, GroupWithCount, FkCandidate, DatasetSchema } from '../types/index.js';
 import { Sidebar } from '../components/layout/Sidebar.js';
 
 const UNCATEGORIZED_KEY = '__uncategorized__';
@@ -681,6 +682,36 @@ interface ModalProps {
   onCreated: (project: Project) => void;
 }
 
+interface SqlPreview {
+  projectName: string;
+  tables: DatasetSchema[];
+  warnings: string[];
+  fkCandidates: FkCandidate[];
+}
+
+function candidateKey(c: FkCandidate): string {
+  return `${c.fromTable}.${c.fromColumn}→${c.toTable}.${c.toColumn}`;
+}
+
+function applyFkCandidates(tables: DatasetSchema[], candidates: FkCandidate[]): DatasetSchema[] {
+  return tables.map((table) => {
+    const applicable = candidates.filter((c) => c.fromTable === table.name);
+    if (applicable.length === 0) return table;
+    return {
+      ...table,
+      columns: table.columns.map((col) => {
+        const match = applicable.find((c) => c.fromColumn === col.name);
+        if (!match) return col;
+        return {
+          ...col,
+          indexType: 'foreign_key' as const,
+          generatorConfig: { ...col.generatorConfig, poolRef: `${match.toTable}.${match.toColumn}` },
+        };
+      }),
+    };
+  });
+}
+
 function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
   const [projectName, setProjectName] = useState('');
   const [source, setSource] = useState('');
@@ -689,6 +720,9 @@ function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [groupId, setGroupId] = useState<string | null>(null);
+  // SQL two-step preview
+  const [sqlPreview, setSqlPreview] = useState<SqlPreview | null>(null);
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
 
   // Modes that load file contents into the textarea (vs CSV which keeps the File object)
   const isTextSource = mode === 'prisma' || mode === 'sql' || mode === 'er';
@@ -741,16 +775,45 @@ function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
     if (!projectName.trim()) { setError('Project name is required'); return; }
     if (mode === 'csv' && !csvFile) { setError('Please select a CSV file'); return; }
     if (mode === 'er' && !source.trim()) { setError('Please paste or upload an ER JSON document'); return; }
+
+    // SQL: two-step — first parse & preview, then create
+    if (mode === 'sql' && !sqlPreview) {
+      if (!source.trim()) { setError('Please paste or upload SQL DDL'); return; }
+      setLoading(true);
+      setError(null);
+      setWarnings([]);
+      try {
+        const preview = await previewProjectFromSql(source, projectName.trim());
+        if (!projectName.trim() && preview.projectName) setProjectName(preview.projectName);
+        setSqlPreview(preview);
+        // Pre-select all high-confidence candidates (>= 0.75)
+        setSelectedCandidates(
+          new Set(preview.fkCandidates.filter((c) => c.confidence >= 0.75).map(candidateKey)),
+        );
+        if (preview.warnings.length > 0) setWarnings(preview.warnings);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    setWarnings([]);
     try {
       let project: Project;
       if (mode === 'manual') {
         project = await createProject(projectName.trim(), [], groupId);
       } else if (mode === 'prisma') {
         project = await inferFromPrisma(source, projectName.trim());
+      } else if (mode === 'sql' && sqlPreview) {
+        // Apply selected FK candidates to the previewed tables
+        const chosenCandidates = sqlPreview.fkCandidates.filter((c) => selectedCandidates.has(candidateKey(c)));
+        const tables = applyFkCandidates(sqlPreview.tables, chosenCandidates);
+        project = await createProject(projectName.trim(), tables, groupId);
       } else if (mode === 'sql') {
+        // Fallback: no preview (should not happen)
         project = await inferProjectFromSql(source, projectName.trim());
       } else if (mode === 'er') {
         const result = await inferProjectFromEr(source, projectName.trim());
@@ -771,7 +834,7 @@ function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
         };
         project = await createProject(projectName.trim(), [table], groupId);
       }
-      // Infer endpoints (prisma/sql/er) don't accept groupId; apply it after.
+      // Infer endpoints (prisma/er) don't accept groupId; apply it after.
       if (groupId && project.groupId !== groupId) {
         project = await moveProjectToGroup(project.id, groupId);
       }
@@ -894,6 +957,89 @@ function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
             </div>
           )}
 
+          {/* SQL FK review step */}
+          {mode === 'sql' && sqlPreview && (
+            <div className="space-y-3">
+              <div className="bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs">
+                <p className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant mb-1">
+                  Tables detected
+                </p>
+                <p className="text-on-surface font-mono">
+                  {sqlPreview.tables.map((t) => t.name).join(', ')}
+                </p>
+              </div>
+
+              {sqlPreview.fkCandidates.length > 0 ? (
+                <div className="border border-outline-variant/30 rounded-lg overflow-hidden">
+                  <div className="px-3 py-2 bg-surface-container border-b border-outline-variant/20 flex items-center justify-between">
+                    <p className="font-label uppercase tracking-widest text-[10px] text-on-surface-variant">
+                      Detected FK relationships
+                    </p>
+                    <div className="flex gap-3 text-[10px]">
+                      <button
+                        className="text-primary hover:underline"
+                        onClick={() => setSelectedCandidates(new Set(sqlPreview.fkCandidates.map(candidateKey)))}
+                      >
+                        All
+                      </button>
+                      <button
+                        className="text-on-surface-variant hover:underline"
+                        onClick={() => setSelectedCandidates(new Set())}
+                      >
+                        None
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-52 overflow-y-auto divide-y divide-outline-variant/10">
+                    {sqlPreview.fkCandidates.map((c) => {
+                      const key = candidateKey(c);
+                      const checked = selectedCandidates.has(key);
+                      const pct = Math.round(c.confidence * 100);
+                      const badgeColor =
+                        pct >= 80 ? 'bg-emerald-500/15 text-emerald-600' :
+                        pct >= 60 ? 'bg-amber-500/15 text-amber-600' :
+                                    'bg-error/10 text-error';
+                      return (
+                        <label
+                          key={key}
+                          className="flex items-start gap-3 px-3 py-2 hover:bg-surface-container/50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 accent-primary"
+                            checked={checked}
+                            onChange={() => {
+                              setSelectedCandidates((prev) => {
+                                const next = new Set(prev);
+                                next.has(key) ? next.delete(key) : next.add(key);
+                                return next;
+                              });
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-mono text-xs text-on-surface truncate">
+                              <span className="text-blue-400">{c.fromTable}.{c.fromColumn}</span>
+                              {' → '}
+                              <span className="text-yellow-400">{c.toTable}.{c.toColumn}</span>
+                            </p>
+                            <p className="text-[10px] text-on-surface-variant truncate mt-0.5">
+                              {c.reasons.join(' · ')}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${badgeColor}`}>
+                            {pct}%
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-on-surface-variant italic">No FK relationships detected — you can draw them manually in the diagram editor.</p>
+              )}
+            </div>
+          )}
+
           {mode === 'csv' && (
             <div>
               <label className="block font-label text-[10px] uppercase tracking-widest text-on-surface-variant mb-1.5">
@@ -936,19 +1082,31 @@ function ImportModal({ mode, groups, onClose, onCreated }: ModalProps) {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant/20">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-lg transition-colors font-label uppercase tracking-widest text-[11px]"
-          >
-            Cancel
-          </button>
+          {mode === 'sql' && sqlPreview ? (
+            <button
+              onClick={() => { setSqlPreview(null); setSelectedCandidates(new Set()); setWarnings([]); }}
+              className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-lg transition-colors font-label uppercase tracking-widest text-[11px]"
+            >
+              ← Back
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface border border-outline-variant/30 rounded-lg transition-colors font-label uppercase tracking-widest text-[11px]"
+            >
+              Cancel
+            </button>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={loading || !projectName.trim() || (mode === 'csv' && !csvFile) || (mode === 'er' && !source.trim())}
+            disabled={loading || !projectName.trim() || (mode === 'csv' && !csvFile) || (mode === 'er' && !source.trim()) || (mode === 'sql' && !sqlPreview && !source.trim())}
             className="flex items-center gap-2 bg-primary text-on-primary-fixed px-5 py-2.5 rounded-lg text-sm font-bold hover:brightness-110 disabled:opacity-50 transition-all font-headline"
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {mode === 'manual' ? 'Create Project' : 'Parse & Create'}
+            {mode === 'manual' ? 'Create Project' :
+             mode === 'sql' && !sqlPreview ? 'Parse & Preview' :
+             mode === 'sql' && sqlPreview ? 'Create Project' :
+             'Parse & Create'}
           </button>
         </div>
       </div>

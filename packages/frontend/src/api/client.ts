@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ColumnSchema, DatasetSchema, GeneratedRow, Group, GroupWithCount, Project, TableRowConfig } from '../types/index.js';
+import type { ColumnSchema, DatasetSchema, FkCandidate, GeneratedRow, Group, GroupWithCount, Project, TableRowConfig } from '../types/index.js';
 
 const api = axios.create({ baseURL: '/api/v1' });
 
@@ -129,6 +129,18 @@ export async function inferFromPrisma(source: string, name?: string): Promise<Pr
 
 export async function inferProjectFromSql(sql: string, name?: string): Promise<Project> {
   const { data } = await api.post<{ ok: true; data: Project }>('/projects/infer/sql', { sql, name });
+  return data.data;
+}
+
+/** Parse SQL + run FK inference without persisting. Used by the review-modal import flow. */
+export async function previewProjectFromSql(
+  sql: string,
+  name?: string,
+): Promise<{ projectName: string; tables: DatasetSchema[]; warnings: string[]; fkCandidates: FkCandidate[] }> {
+  const { data } = await api.post<{
+    ok: true;
+    data: { projectName: string; tables: DatasetSchema[]; warnings: string[]; fkCandidates: FkCandidate[] };
+  }>('/projects/preview/sql', { sql, name });
   return data.data;
 }
 
